@@ -103,12 +103,18 @@ const StyledMenuItemWithIcon = styled.div`
 const StyledAnchor = styled.a`
   padding-right: ${({ theme }) => theme.sizeUnit}px;
   padding-left: ${({ theme }) => theme.sizeUnit}px;
+  color: var(--sidebar-foreground);
+
+  &:hover {
+    color: var(--sidebar-accent-foreground);
+  }
 `;
 
 const StyledMenuItem = styled.div<{ disabled?: boolean }>`
   ${({ theme, disabled }) => css`
+    color: var(--sidebar-foreground);
     &&:hover {
-      color: ${!disabled && theme.colorPrimary};
+      color: ${!disabled && 'var(--sidebar-accent-foreground)'};
       cursor: ${!disabled ? 'pointer' : 'not-allowed'};
     }
     ${
@@ -829,11 +835,20 @@ const RightMenu = ({
             align-items: center;
             height: 100%;
             border-bottom: none !important;
+            background: transparent !important;
+            color: var(--sidebar-foreground);
 
             /* Remove the underline from menu items */
             .ant-menu-item:after,
             .ant-menu-submenu:after {
               content: none !important;
+            }
+
+            .ant-menu-item,
+            .ant-menu-submenu-title,
+            .ant-menu-title-content,
+            .anticon {
+              color: var(--sidebar-foreground) !important;
             }
 
             .submenu-with-caret {
@@ -847,7 +862,7 @@ const RightMenu = ({
                 height: 100%;
               }
               [data-icon='down'] {
-                color: ${theme.colorIcon};
+                color: var(--sidebar-foreground);
                 /* sizeXS (an antd token, always computed) rather than
                    fontSizeXS (a Superset custom token seeded only via
                    THEME_DEFAULT in config.py) so this stays small in
@@ -861,8 +876,12 @@ const RightMenu = ({
               }
               &.ant-menu-submenu:hover,
               &.ant-menu-submenu-active {
+                .ant-menu-submenu-title {
+                  background: var(--sidebar-accent);
+                  border-radius: 6px;
+                }
                 .ant-menu-title-content {
-                  color: ${theme.colorPrimary};
+                  color: var(--sidebar-accent-foreground);
                 }
               }
             }

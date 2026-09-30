@@ -41,8 +41,9 @@ import { isMobileConsumptionEnabled } from 'src/hooks/useIsMobile';
 import { Typography } from '@superset-ui/core/components/Typography';
 
 const StyledHeader = styled.div<{ backgroundColor?: string }>`
-  background-color: ${({ theme, backgroundColor }) =>
-    backgroundColor || theme.colorBgContainer};
+  /* Transparent by default so Plumage canvas / blob wash shows through */
+  background-color: ${({ backgroundColor }) =>
+    backgroundColor || 'transparent'};
   align-items: center;
   position: relative;
   padding: ${({ theme }) => theme.sizeUnit * 2}px
@@ -55,11 +56,12 @@ const StyledHeader = styled.div<{ backgroundColor?: string }>`
     font-size: 18px;
     display: inline-block;
     line-height: ${({ theme }) => theme.sizeUnit * 9}px;
+    color: var(--foreground, ${({ theme }) => theme.colorText});
   }
   .nav-right {
     display: flex;
     align-items: center;
-    /* margin-right: ${({ theme }) => theme.sizeUnit * 3}px; */
+    gap: ${({ theme }) => theme.sizeUnit * 3}px;
     float: right;
     position: absolute;
     right: ${({ theme }) => theme.sizeUnit * 4}px;
@@ -75,6 +77,10 @@ const StyledHeader = styled.div<{ backgroundColor?: string }>`
       &:hover {
         border-bottom: transparent;
       }
+    }
+    /* Avoid double margin; gap handles SubMenu action spacing */
+    .superset-button + .superset-button:not(.ant-btn-compact-item) {
+      margin-left: 0;
     }
   }
   .nav-right-collapse {
@@ -92,18 +98,67 @@ const StyledHeader = styled.div<{ backgroundColor?: string }>`
   .menu > .ant-menu {
     padding-left: ${({ theme }) => theme.sizeUnit * 5}px;
     line-height: ${({ theme }) => theme.sizeUnit * 5}px;
+    background: transparent !important;
+    border-bottom: none !important;
 
     .ant-menu-item {
-      border-radius: ${({ theme }) => theme.borderRadius}px;
+      /* Inactive tab — Plumage ghost/link */
+      border-radius: 6px;
       font-size: ${({ theme }) => theme.fontSizeSM}px;
+      font-weight: 500;
       padding: ${({ theme }) => theme.sizeUnit}px
         ${({ theme }) => theme.sizeUnit * 4}px;
       margin-right: ${({ theme }) => theme.sizeUnit}px;
+      background: transparent !important;
+      color: var(--foreground, ${({ theme }) => theme.colorText}) !important;
+      border-bottom: none !important;
+
+      &::after {
+        display: none !important;
+      }
+
+      a,
+      .no-router {
+        color: inherit !important;
+      }
     }
-    .ant-menu-item:hover,
-    .ant-menu-item:has(> span > .active) {
-      background-color: ${({ theme }) => theme.colorPrimaryBgHover};
-      color: ${({ theme }) => theme.colorText};
+
+    .ant-menu-item:hover {
+      background: color-mix(
+        in oklab,
+        var(--foreground, ${({ theme }) => theme.colorText}) 6%,
+        transparent
+      ) !important;
+      color: var(--foreground, ${({ theme }) => theme.colorText}) !important;
+    }
+
+    /* Active tab — Plumage primary pill */
+    .ant-menu-item:has(> span > .active),
+    .ant-menu-item-selected {
+      background: var(--primary, ${({ theme }) => theme.colorPrimary}) !important;
+      color: var(
+        --primary-foreground,
+        ${({ theme }) => theme.colorTextLightSolid}
+      ) !important;
+
+      a,
+      .no-router,
+      .active {
+        color: inherit !important;
+      }
+    }
+
+    .ant-menu-item:has(> span > .active):hover,
+    .ant-menu-item-selected:hover {
+      background: color-mix(
+        in oklab,
+        var(--primary, ${({ theme }) => theme.colorPrimary}) 88%,
+        var(--background, ${({ theme }) => theme.colorBgBase})
+      ) !important;
+      color: var(
+        --primary-foreground,
+        ${({ theme }) => theme.colorTextLightSolid}
+      ) !important;
     }
   }
 

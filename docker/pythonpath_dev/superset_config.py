@@ -136,6 +136,151 @@ WEBDRIVER_BASEURL_USER_FRIENDLY = (
 )
 SQLLAB_CTAS_NO_LIMIT = True
 
+# RedOwl Plumage categorical palette for bar / line / area (and other) charts.
+# Appears under Customize > Color Scheme; isDefault makes it the registry default.
+REDOWL_CATEGORICAL_COLORS = [
+    "#900f21",
+    "#3080bc",
+    "#0fa05c",
+    "#de9c31",
+    "#73599e",
+    "#0d9298",
+]
+
+EXTRA_CATEGORICAL_COLOR_SCHEMES = [
+    {
+        "id": "redowl",
+        "label": "RedOwl Plumage",
+        "description": "RedOwl categorical palette",
+        "isDefault": True,
+        "colors": REDOWL_CATEGORICAL_COLORS,
+    }
+]
+
+# Brand chrome (header logo, app name, favicon).
+APP_NAME = "RedOwl"
+APP_ICON = "/static/assets/images/redowl-logo.svg"
+FAVICONS = [{"href": "/static/assets/images/favicon.png"}]
+
+# Brand app chrome + ECharts base color fallback (series still prefer color_scheme /
+# label_colors when set). Partial THEME_* is deep-merged with built-in tokens.
+# Hex values are sRGB conversions of Plumage :root / .dark semantic OKLCH tokens.
+THEME_DEFAULT = {
+    "token": {
+        # --primary / --foreground (Plumage primary button fill)
+        "colorPrimary": "#182316",
+        "colorPrimaryHover": "#2e352c",
+        "colorPrimaryActive": "#10160f",
+        "colorTextBase": "#182316",
+        # --background (warm cream canvas)
+        "colorBgBase": "#f5f4ee",
+        "colorBgLayout": "#f5f4ee",
+        # --card
+        "colorBgContainer": "#fdfdfb",
+        # --border
+        "colorBorder": "#e6e5df",
+        "colorBorderSecondary": "#eae8e0",
+        # --info / --success / --warning / --destructive
+        "colorLink": "#168dd9",
+        "colorInfo": "#168dd9",
+        "colorSuccess": "#0fa05c",
+        "colorWarning": "#efa831",
+        "colorError": "#e7000b",
+        "colorErrorHover": "#c40009",
+        "colorErrorActive": "#a30008",
+        # --radius + Plumage button chrome
+        "borderRadius": 8,
+        "buttonBorderRadius": 6,
+        "buttonControlHeight": 36,
+        "buttonPaddingInline": 16,
+        "buttonFontSize": 14,
+        # Secondary = Plumage taupe fill (--secondary)
+        "buttonSecondaryColor": "#182316",
+        "buttonSecondaryBg": "#d4d2c8",
+        "buttonSecondaryBorderColor": "transparent",
+        "buttonSecondaryHoverColor": "#182316",
+        "buttonSecondaryHoverBg": "#f1f0ea",
+        "buttonSecondaryHoverBorderColor": "transparent",
+        "buttonSecondaryActiveColor": "#182316",
+        "buttonSecondaryActiveBg": "#e8e6d9",
+        "buttonSecondaryActiveBorderColor": "transparent",
+        # Draft / Published badges (card status pills)
+        "labelDraftColor": "#ffffff",
+        "labelDraftBg": "#182316",
+        "labelDraftBorderColor": "transparent",
+        "labelDraftIconColor": "#ffffff",
+        "labelPublishedColor": "#ffffff",
+        "labelPublishedBg": "#0fa05c",
+        "labelPublishedBorderColor": "transparent",
+        "labelPublishedIconColor": "#ffffff",
+        "labelBorderRadius": 6,
+        "brandAppName": "RedOwl",
+        "brandLogoAlt": "RedOwl",
+        "brandLogoUrl": APP_ICON,
+        "brandLogoHeight": "28px",
+    },
+    "echartsOptionsOverrides": {
+        "color": REDOWL_CATEGORICAL_COLORS,
+    },
+}
+
+THEME_DARK = {
+    "algorithm": "dark",
+    "token": {
+        # --primary / --foreground
+        "colorPrimary": "#f1f4f1",
+        "colorPrimaryHover": "#dfe3df",
+        "colorPrimaryActive": "#c9cec9",
+        "colorTextBase": "#f1f4f1",
+        # --background / --card
+        "colorBgBase": "#0c0d0f",
+        "colorBgLayout": "#0c0d0f",
+        "colorBgContainer": "#1c1e21",
+        # --border (oklch(1 0 0 / 14%))
+        "colorBorder": "rgba(255, 255, 255, 0.14)",
+        "colorBorderSecondary": "rgba(255, 255, 255, 0.10)",
+        # --info / --success / --warning / --destructive
+        "colorLink": "#3ba6f5",
+        "colorInfo": "#3ba6f5",
+        "colorSuccess": "#35c177",
+        "colorWarning": "#fcb442",
+        "colorError": "#f9423d",
+        "colorErrorHover": "#ff6b66",
+        "colorErrorActive": "#d93632",
+        "borderRadius": 8,
+        "buttonBorderRadius": 6,
+        "buttonControlHeight": 36,
+        "buttonPaddingInline": 16,
+        "buttonFontSize": 14,
+        # Secondary = Plumage dark --secondary
+        "buttonSecondaryColor": "#f1f4f1",
+        "buttonSecondaryBg": "#3f444a",
+        "buttonSecondaryBorderColor": "transparent",
+        "buttonSecondaryHoverColor": "#f1f4f1",
+        "buttonSecondaryHoverBg": "#303337",
+        "buttonSecondaryHoverBorderColor": "transparent",
+        "buttonSecondaryActiveColor": "#f1f4f1",
+        "buttonSecondaryActiveBg": "#242729",
+        "buttonSecondaryActiveBorderColor": "transparent",
+        "labelDraftColor": "#10140f",
+        "labelDraftBg": "#f1f4f1",
+        "labelDraftBorderColor": "transparent",
+        "labelDraftIconColor": "#10140f",
+        "labelPublishedColor": "#052516",
+        "labelPublishedBg": "#35c177",
+        "labelPublishedBorderColor": "transparent",
+        "labelPublishedIconColor": "#052516",
+        "labelBorderRadius": 6,
+        "brandAppName": "RedOwl",
+        "brandLogoAlt": "RedOwl",
+        "brandLogoUrl": APP_ICON,
+        "brandLogoHeight": "28px",
+    },
+    "echartsOptionsOverrides": {
+        "color": REDOWL_CATEGORICAL_COLORS,
+    },
+}
+
 log_level_text = os.getenv("SUPERSET_LOG_LEVEL", "INFO")
 LOG_LEVEL = getattr(logging, log_level_text.upper(), logging.INFO)
 

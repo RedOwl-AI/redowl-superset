@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { getCategoricalSchemeRegistry } from '@superset-ui/core';
 import {
   Avatar,
   AvatarGroup,
@@ -28,7 +27,15 @@ import type { CSSProperties } from 'react';
 import { ensureAppRoot } from 'src/utils/navigationUtils';
 import Subject, { SubjectType } from 'src/types/Subject';
 
-const colorList = getCategoricalSchemeRegistry().get()?.colors ?? [];
+/* Plumage neutral greys — keep editor/viewer avatars muted, not chart-brand red. */
+const colorList = [
+  '#758195',
+  '#626f86',
+  '#44546f',
+  '#8590a2',
+  '#b0b7c4',
+  '#67665f',
+];
 const AVATAR_SIZE: AvatarProps['size'] = 'small';
 const SUBJECT_TYPE_ORDER: Record<SubjectType, number> = {
   [SubjectType.User]: 0,

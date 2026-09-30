@@ -155,6 +155,32 @@ const pageScrollContentCss = css`
   flex-direction: column;
 `;
 
+/* Desktop: left Plumage sidebar + scrolling content column.
+ * Narrow viewports stack the compact top bar above content. */
+const appShellRowCss = css`
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 100vh;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+  }
+`;
+
+const appMainColumnCss = css`
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 100vh;
+
+  @media (max-width: 767px) {
+    min-height: 0;
+  }
+`;
+
 // Renders the app shell and picks the scroll model: in chat panel mode <Layout>
 // sits in a Splitter beside the chat panel; otherwise the page scrolls normally.
 const AppContent = ({
@@ -240,20 +266,28 @@ const AppContent = ({
   );
 
   return (
-    <Flex vertical css={isPanelOpen ? lockedShellCss : pageScrollShellCss}>
+    <div css={appShellRowCss}>
       <MenuWrapper
         data={bootstrapData.common.menu_data}
         isFrontendRoute={isFrontendRoute}
       />
-      <ExtensionsStartup>
-        {hasChatExtension && panelOpen && (
-          <InPortal node={chatPortalNode}>
-            <ChatPanelHost />
-          </InPortal>
-        )}
-        {content}
-      </ExtensionsStartup>
-    </Flex>
+      <Flex
+        vertical
+        css={[
+          appMainColumnCss,
+          isPanelOpen ? lockedShellCss : pageScrollShellCss,
+        ]}
+      >
+        <ExtensionsStartup>
+          {hasChatExtension && panelOpen && (
+            <InPortal node={chatPortalNode}>
+              <ChatPanelHost />
+            </InPortal>
+          )}
+          {content}
+        </ExtensionsStartup>
+      </Flex>
+    </div>
   );
 };
 

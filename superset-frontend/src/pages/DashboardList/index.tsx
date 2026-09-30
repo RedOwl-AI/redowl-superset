@@ -870,7 +870,7 @@ function DashboardList(props: DashboardListProps) {
   return (
     <>
       <SubMenu
-        name={t('Dashboards')}
+        name={t('Dashboard')}
         buttons={subMenuButtons}
         leftIcon={
           isMobile ? (

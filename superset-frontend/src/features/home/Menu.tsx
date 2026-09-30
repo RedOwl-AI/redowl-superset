@@ -16,21 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { styled, css, useTheme } from '@apache-superset/core/theme';
 import { t } from '@apache-superset/core/translation';
 import { ensureStaticPrefix } from 'src/utils/assetUrl';
 import { ensureAppRoot, stripAppRoot } from 'src/utils/navigationUtils';
 import { getUrlParam, isUrlExternal } from 'src/utils/urlUtils';
 import { MainNav, MenuItem } from '@superset-ui/core/components/Menu';
-import { Tooltip, Grid, Row, Col, Image } from '@superset-ui/core/components';
+import { Tooltip, Image } from '@superset-ui/core/components';
 import { GenericLink } from 'src/components';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Icons } from '@superset-ui/core/components/Icons';
 import { Typography } from '@superset-ui/core/components/Typography';
 import { useUiConfig } from 'src/components/UiConfigContext';
 import { useIsMobile } from 'src/hooks/useIsMobile';
 import { URL_PARAMS } from 'src/constants';
+import { RoutePaths } from 'src/views/routePaths';
 import {
   MenuObjectChildProps,
   MenuObjectProps,
@@ -38,23 +38,31 @@ import {
 } from 'src/types/bootstrapTypes';
 import { datasetsLabel } from 'src/features/semanticLayers/label';
 import RightMenu from './RightMenu';
-import { NAVBAR_MENU_POPUP_OFFSET } from './commonMenuData';
 
 interface MenuProps {
   data: MenuData;
   isFrontendRoute?: (path?: string) => boolean;
 }
 
-const StyledHeader = styled.header`
-  ${({ theme }) => css`
-    background-color: ${theme.colorBgContainer};
-    border-bottom: 1px solid ${theme.colorBorderSecondary};
-    padding: 0 ${theme.sizeUnit * 4}px;
-    z-index: 10;
+const SIDEBAR_WIDTH = '13.75rem'; // ~220px — Plumage-style primary side menu
 
-    &:nth-last-of-type(2) nav {
-      margin-bottom: 2px;
-    }
+const StyledSidebar = styled.aside`
+  ${({ theme }) => css`
+    display: flex;
+    flex-direction: column;
+    width: ${SIDEBAR_WIDTH};
+    min-width: ${SIDEBAR_WIDTH};
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--sidebar);
+    background-image: var(--gradient-sidebar);
+    border-right: 1px solid var(--sidebar-border);
+    box-shadow: inset -1px 0 0 hsl(0 0% 100% / 0.04);
+    color: var(--sidebar-foreground);
+    padding: ${theme.sizeUnit * 3}px ${theme.sizeUnit * 2}px;
+    box-sizing: border-box;
 
     .caret {
       display: none;
@@ -62,97 +70,135 @@ const StyledHeader = styled.header`
   `}
 `;
 
+/** Compact top bar for narrow viewports (hamburger lives in RightMenu). */
+const StyledMobileBar = styled.header`
+  ${({ theme }) => css`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background-color: var(--sidebar);
+    background-image: var(--gradient-sidebar);
+    border-bottom: 1px solid var(--sidebar-border);
+    color: var(--sidebar-foreground);
+    padding: 0 ${theme.sizeUnit * 3}px;
+    min-height: ${theme.sizeUnit * 12}px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  `}
+`;
+
+const StyledBrandBlock = styled.div`
+  ${({ theme }) => css`
+    display: flex;
+    align-items: center;
+    gap: ${theme.sizeUnit * 2}px;
+    padding: ${theme.sizeUnit * 2}px ${theme.sizeUnit * 2}px
+      ${theme.sizeUnit * 4}px;
+    flex-shrink: 0;
+  `}
+`;
+
 const StyledBrandText = styled.div`
   ${({ theme }) => css`
-    border-left: 1px solid ${theme.colorBorderSecondary};
-    border-right: 1px solid ${theme.colorBorderSecondary};
-    height: 100%;
-    color: ${theme.colorText};
-    padding-left: ${theme.sizeUnit * 4}px;
-    padding-right: ${theme.sizeUnit * 4}px;
+    color: var(--sidebar-foreground);
     font-size: ${theme.fontSizeLG}px;
-    float: left;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    font-weight: ${theme.fontWeightStrong};
+    line-height: 1.3;
+    min-width: 0;
 
     span {
-      max-width: ${theme.sizeUnit * 58}px;
+      display: block;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-
-    @media (max-width: 1127px) {
-      display: none;
-    }
   `}
+`;
+
+const StyledNavScroll = styled.div`
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -${({ theme }) => theme.sizeUnit}px;
+  padding: 0 ${({ theme }) => theme.sizeUnit}px;
 `;
 
 const StyledMainNav = styled(MainNav)`
   ${({ theme }) => css`
+    background: transparent !important;
+    color: var(--sidebar-foreground);
+    border-inline-end: none !important;
+    width: 100%;
+
+    .ant-menu-item,
+    .ant-menu-submenu-title {
+      color: var(--sidebar-foreground) !important;
+      border-radius: 8px;
+      margin-inline: 0;
+      width: 100%;
+      height: auto !important;
+      line-height: 1.4 !important;
+      padding: ${theme.sizeUnit * 2}px ${theme.sizeUnit * 3}px !important;
+    }
+
     .ant-menu-item .ant-menu-item-icon + span,
     .ant-menu-submenu-title .ant-menu-item-icon + span,
     .ant-menu-item .anticon + span,
     .ant-menu-submenu-title .anticon + span {
-      margin-inline-start: 0;
+      margin-inline-start: ${theme.sizeUnit * 2}px;
     }
 
-    .ant-menu-submenu.ant-menu-submenu-horizontal {
-      display: flex;
-      align-items: center;
-      height: 100%;
-      padding: 0;
-
-      .ant-menu-submenu-title {
-        display: flex;
-        gap: ${theme.sizeUnit * 2}px;
-        flex-direction: row-reverse;
-        align-items: center;
-        height: 100%;
-        padding: 0 ${theme.sizeUnit * 4}px;
-      }
-
-      [data-icon='down'] {
-        color: ${theme.colorIcon};
-        /* sizeXS (an antd token, always computed) rather than fontSizeXS
-           (a Superset custom token seeded only via THEME_DEFAULT in
-           config.py) so this stays small in contexts that construct a
-           theme without that seed, e.g. Storybook and Jest. Both resolve
-           to the same 8px in the app's default theme. */
-        font-size: ${theme.sizeXS}px;
-      }
-
-      &:hover,
-      &.ant-menu-submenu-active {
-        .ant-menu-title-content {
-          color: ${theme.colorPrimary};
-        }
-      }
-
-      &::after {
-        content: '';
-        position: absolute;
-        width: 98%;
-        height: 2px;
-        background-color: ${theme.colorPrimaryBorderHover};
-        bottom: ${theme.sizeUnit / 8}px;
-        left: 1%;
-        right: auto;
-        inset-inline-start: 1%;
-        inset-inline-end: auto;
-        transform: scale(0);
-        transition: 0.2s all ease-out;
-      }
-
-      &:hover::after,
-      &.ant-menu-submenu-open::after {
-        transform: scale(1);
-      }
+    .ant-menu-item:hover,
+    .ant-menu-submenu-title:hover {
+      background: color-mix(
+        in oklab,
+        var(--sidebar-foreground) 10%,
+        transparent
+      ) !important;
+      color: var(--sidebar-accent-foreground) !important;
     }
 
-    .ant-menu-submenu-selected.ant-menu-submenu-horizontal::after {
-      transform: scale(1);
+    .ant-menu-item-selected,
+    .ant-menu-submenu-selected > .ant-menu-submenu-title {
+      background: var(--sidebar-accent) !important;
+      color: var(--sidebar-accent-foreground) !important;
+    }
+
+    .ant-menu-submenu .ant-menu-sub {
+      background: transparent !important;
+    }
+
+    .ant-menu-sub .ant-menu-item {
+      padding-inline-start: ${theme.sizeUnit * 5}px !important;
+      font-size: ${theme.fontSizeSM}px;
+    }
+
+    a {
+      color: inherit !important;
+    }
+
+    .ant-menu-submenu-arrow {
+      color: var(--sidebar-muted-foreground) !important;
+    }
+  `}
+`;
+
+const StyledSidebarFooter = styled.div`
+  ${({ theme }) => css`
+    flex-shrink: 0;
+    border-top: 1px solid var(--sidebar-border);
+    padding-top: ${theme.sizeUnit * 2}px;
+    margin-top: ${theme.sizeUnit * 2}px;
+
+    /* RightMenu is horizontal; keep icons readable on the red rail */
+    .ant-menu {
+      background: transparent !important;
+      border: none !important;
+      color: var(--sidebar-foreground);
+      justify-content: flex-start;
     }
   `}
 `;
@@ -161,11 +207,13 @@ const StyledBrandWrapper = styled.div<{ margin?: string }>`
   ${({ margin }) => css`
     height: ${margin ? 'auto' : '100%'};
     margin: ${margin ?? 0};
+    display: flex;
+    align-items: center;
   `}
 `;
 
 const StyledBrandLink = styled(GenericLink)`
-  ${({ theme }) => css`
+  ${() => css`
     align-items: center;
     display: flex;
     height: 100%;
@@ -176,28 +224,15 @@ const StyledBrandLink = styled(GenericLink)`
     }
 
     &:focus-visible {
-      border-color: ${theme.colorPrimaryText};
+      border-color: var(--sidebar-ring);
+      outline-color: var(--sidebar-ring);
     }
-  `}
-`;
-
-const StyledRow = styled(Row)`
-  height: 100%;
-`;
-
-const StyledCol = styled(Col)`
-  ${({ theme }) => css`
-    display: flex;
-    gap: ${theme.sizeUnit * 4}px;
-    flex-wrap: wrap;
   `}
 `;
 
 const StyledImage = styled(Image)`
   object-fit: contain;
 `;
-
-const { useBreakpoint } = Grid;
 
 export function Menu({
   data: {
@@ -209,34 +244,20 @@ export function Menu({
   },
   isFrontendRoute = () => false,
 }: MenuProps) {
-  const screens = useBreakpoint();
   const isMobile = useIsMobile();
   const uiConfig = useUiConfig();
   const theme = useTheme();
-  // screens.md is undefined on the first render before breakpoints are measured;
-  // fall back to the actual viewport width (using the same threshold as antd's
-  // md media query) so the first paint matches the device layout instead of
-  // flashing to the wrong mode on either desktop or mobile
-  const isMd = screens.md ?? window.innerWidth >= theme.screenMDMin;
 
   enum Paths {
     Explore = '/explore',
     Dashboard = '/dashboard',
     Chart = '/chart',
     Datasets = '/tablemodelview',
-    // The legacy FAB dataset list still lives at ``/tablemodelview/list/``,
-    // but the modern React-managed dataset add + detail routes are under
-    // ``/dataset/*`` (``/dataset/add/``, ``/dataset/:datasetId``). Both
-    // prefixes must map to the Datasets tab so the top-nav highlight
-    // survives navigation into the create/edit flow. See #42467.
     Dataset = '/dataset',
     SqlLab = '/sqllab',
     SavedQueries = '/savedqueryview',
   }
 
-  // Stable Flask-AppBuilder menu identifiers (`name`), used as menu item keys.
-  // These are locale-independent, unlike the displayed labels, so matching the
-  // active tab against them keeps highlighting working in every language.
   enum MenuKeys {
     Dashboards = 'Dashboards',
     Charts = 'Charts',
@@ -246,7 +267,9 @@ export function Menu({
 
   const defaultTabSelection: string[] = [];
   const [activeTabs, setActiveTabs] = useState(defaultTabSelection);
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
   const location = useLocation();
+
   useEffect(() => {
     const path = location.pathname;
     switch (true) {
@@ -263,85 +286,101 @@ export function Menu({
         break;
       case path.startsWith(Paths.SqlLab) || path.startsWith(Paths.SavedQueries):
         setActiveTabs([MenuKeys.SqlLab]);
+        setOpenKeys(keys =>
+          keys.includes(MenuKeys.SqlLab) ? keys : [...keys, MenuKeys.SqlLab],
+        );
         break;
       default:
         setActiveTabs(defaultTabSelection);
     }
   }, [location.pathname]);
 
-  const standalone = getUrlParam(URL_PARAMS.standalone);
-  if (standalone || uiConfig.hideNav) return <></>;
-
-  const buildMenuItem = ({
-    label,
-    childs,
-    url,
-    isFrontendRoute,
-    name,
-  }: MenuObjectProps): MenuItem => {
-    // Key items by the stable FAB `name` so active-tab matching is independent
-    // of the localized label. Fall back to the label when no name is provided.
-    const key = name ?? label;
-    if (url && isFrontendRoute) {
-      // `<Router basename={applicationRoot()}>` re-prepends the app root to
-      // `to`, so handing it the already-rooted `url` from bootstrap_data
-      // would render a doubled `/superset/superset/...` anchor. Strip the
-      // root first; mirrors the brand-link treatment below.
-      return {
-        key,
-        label: (
-          <NavLink to={stripAppRoot(url)} activeClassName="is-active">
-            {label}
-          </NavLink>
-        ),
-      };
-    }
-
-    if (url) {
-      return {
-        key,
-        label: <Typography.Link href={url}>{label}</Typography.Link>,
-      };
-    }
-
-    const childItems: MenuItem[] = [];
-    childs?.forEach((child: MenuObjectChildProps | string, index1: number) => {
-      if (typeof child === 'string' && child === '-' && label !== t('Data')) {
-        childItems.push({ type: 'divider', key: `divider-${index1}` });
-      } else if (typeof child !== 'string') {
-        Object.assign(child, { label: t(child.label) });
-        childItems.push({
-          // Key children by the stable FAB `name` as well, so a child whose
-          // localized label coincides with a parent key (e.g. the "SQL Editor"
-          // child labeled "SQL Lab" under the "SQL Lab" category) doesn't
-          // collide with that parent. Fall back to the label when no name.
-          key: child.name ?? `${child.label}`,
-          label: child.isFrontendRoute ? (
-            <NavLink
-              to={stripAppRoot(child.url || '')}
-              exact
-              activeClassName="is-active"
-            >
-              {child.label}
-            </NavLink>
-          ) : (
-            <Typography.Link href={child.url}>{child.label}</Typography.Link>
-          ),
-        });
-      }
-    });
-
-    return {
-      key,
+  const navItems = useMemo(() => {
+    const buildMenuItem = ({
       label,
-      ...(isMd && {
-        icon: <Icons.DownOutlined iconSize="xs" />,
-        popupOffset: NAVBAR_MENU_POPUP_OFFSET,
-      }),
-      children: childItems,
+      childs,
+      url,
+      isFrontendRoute: itemIsFrontendRoute,
+      name,
+    }: MenuObjectProps): MenuItem => {
+      const key = name ?? label;
+      if (url && itemIsFrontendRoute) {
+        return {
+          key,
+          label: (
+            <NavLink to={stripAppRoot(url)} activeClassName="is-active">
+              {label}
+            </NavLink>
+          ),
+        };
+      }
+
+      if (url) {
+        return {
+          key,
+          label: <Typography.Link href={url}>{label}</Typography.Link>,
+        };
+      }
+
+      const childItems: MenuItem[] = [];
+      childs?.forEach((child: MenuObjectChildProps | string, index1: number) => {
+        if (typeof child === 'string' && child === '-' && label !== t('Data')) {
+          childItems.push({ type: 'divider', key: `divider-${index1}` });
+        } else if (typeof child !== 'string') {
+          Object.assign(child, { label: t(child.label) });
+          childItems.push({
+            key: child.name ?? `${child.label}`,
+            label: child.isFrontendRoute ? (
+              <NavLink
+                to={stripAppRoot(child.url || '')}
+                exact
+                activeClassName="is-active"
+              >
+                {child.label}
+              </NavLink>
+            ) : (
+              <Typography.Link href={child.url}>{child.label}</Typography.Link>
+            ),
+          });
+        }
+      });
+
+      // Parent with children → expandable inline submenu (not a popup).
+      return {
+        key,
+        label,
+        children: childItems,
+      };
     };
-  };
-  const renderBrand = () => {
+
+    return menu.map(item => {
+      const props = {
+        ...item,
+        label: t(item.label),
+        isFrontendRoute: isFrontendRoute(item.url),
+        childs: item.childs?.map(c => {
+          if (typeof c === 'string') {
+            return c;
+          }
+          return {
+            ...c,
+            isFrontendRoute: isFrontendRoute(c.url),
+          };
+        }),
+      };
+      return buildMenuItem(props);
+    });
+  }, [menu, isFrontendRoute]);
+
+  const standalone = getUrlParam(URL_PARAMS.standalone);
+  const path = location.pathname.replace(/\/$/, '') || '/';
+  const isAuthPage =
+    path === RoutePaths.LOGIN.replace(/\/$/, '') ||
+    path === RoutePaths.LOGOUT.replace(/\/$/, '') ||
+    path.startsWith(RoutePaths.REGISTER.replace(/\/$/, ''));
+  if (standalone || uiConfig.hideNav || isAuthPage) return <></>;
+
+  const renderBrand = (showText = true) => {
     if (brand.hide_logo) {
       return null;
     }
@@ -363,15 +402,6 @@ export function Menu({
               {brandImage}
             </Typography.Link>
           ) : (
-            // StyledBrandLink wraps GenericLink -> react-router <Link>, and
-            // `<Router basename={applicationRoot()}>` re-prepends the app root
-            // to `to`. Strip the root so the rendered anchor is single-prefixed
-            // rather than a doubled `/superset/superset/...`. Strip `brandHref`
-            // (the ensureAppRoot'd value) rather than the raw
-            // `theme.brandLogoHref` so an unset href (partial theme override)
-            // stays null-safe — `ensureAppRoot(undefined)` yields the app root,
-            // which `stripAppRoot` then reduces to `/`. Mirrors the brand.path
-            // branch's single-prefix treatment.
             <StyledBrandLink to={stripAppRoot(brandHref)}>
               {brandImage}
             </StyledBrandLink>
@@ -379,13 +409,6 @@ export function Menu({
         </StyledBrandWrapper>
       );
     } else if (isFrontendRoute(window.location.pathname)) {
-      // ---------------------------------------------------------------------------------
-      // TODO: deprecate this once Theme is fully rolled out
-      // Kept as is for backwards compatibility with the old theme system / superset_config.py
-      //
-      // `<Router basename={applicationRoot()}>` re-prepends the app root to the
-      // `to` prop, so handing it an already-rooted `brand.path` would render a
-      // doubled `/superset/superset/...` href. Strip the root first.
       link = (
         <GenericLink className="navbar-brand" to={stripAppRoot(brand.path)}>
           <StyledImage
@@ -410,86 +433,72 @@ export function Menu({
         </Typography.Link>
       );
     }
-    // ---------------------------------------------------------------------------------
-    return <>{link}</>;
+
+    return (
+      <StyledBrandBlock>
+        <Tooltip
+          id="brand-tooltip"
+          placement="right"
+          title={brand.tooltip}
+          arrow={{ pointAtCenter: true }}
+        >
+          {link}
+        </Tooltip>
+        {showText && brand.text && (
+          <StyledBrandText>
+            <span>{brand.text}</span>
+          </StyledBrandText>
+        )}
+      </StyledBrandBlock>
+    );
   };
+
+  const rightMenu = (
+    <RightMenu
+      align="flex-start"
+      settings={settings}
+      navbarRight={navbarRight}
+      isFrontendRoute={isFrontendRoute}
+      environmentTag={environmentTag}
+      menu={menu}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <StyledMobileBar
+        className="mobile"
+        id="main-menu"
+        aria-label={t('Main navigation')}
+      >
+        {!brand.hide_logo && renderBrand(false)}
+        {rightMenu}
+      </StyledMobileBar>
+    );
+  }
+
   return (
-    <StyledHeader
-      as="nav"
-      className="top"
+    <StyledSidebar
+      className="sidebar"
       id="main-menu"
       aria-label={t('Main navigation')}
     >
-      <StyledRow>
-        {/* Mobile: left placeholder for future icon */}
-        {isMobile && <Col xs={4} />}
-        <StyledCol
-          md={16}
-          xs={isMobile ? 16 : 24}
-          css={
-            isMobile &&
-            css`
-              justify-content: center;
-            `
-          }
-        >
-          {!brand.hide_logo && (
-            <Tooltip
-              id="brand-tooltip"
-              placement="bottomLeft"
-              title={brand.tooltip}
-              arrow={{ pointAtCenter: true }}
-            >
-              {renderBrand()}
-            </Tooltip>
-          )}
-          {!brand.hide_logo && brand.text && (
-            <StyledBrandText>
-              <span>{brand.text}</span>
-            </StyledBrandText>
-          )}
-          {/* Consumption mode: hide nav items on mobile (drawer holds them) */}
-          {!isMobile && (
-            <StyledMainNav
-              mode={isMd ? 'horizontal' : 'inline'}
-              data-test="navbar-top"
-              className="main-nav"
-              selectedKeys={activeTabs}
-              disabledOverflow
-              items={menu.map(item => {
-                const props = {
-                  ...item,
-                  label: t(item.label),
-                  isFrontendRoute: isFrontendRoute(item.url),
-                  childs: item.childs?.map(c => {
-                    if (typeof c === 'string') {
-                      return c;
-                    }
+      {!brand.hide_logo && renderBrand(true)}
 
-                    return {
-                      ...c,
-                      isFrontendRoute: isFrontendRoute(c.url),
-                    };
-                  }),
-                };
+      <StyledNavScroll>
+        <StyledMainNav
+          mode="inline"
+          data-test="navbar-top"
+          className="main-nav"
+          selectedKeys={activeTabs}
+          openKeys={openKeys}
+          onOpenChange={keys => setOpenKeys(keys as string[])}
+          items={navItems}
+        />
+      </StyledNavScroll>
 
-                return buildMenuItem(props);
-              })}
-            />
-          )}
-        </StyledCol>
-        <Col md={8} xs={isMobile ? 4 : 24}>
-          <RightMenu
-            align={isMd || isMobile ? 'flex-end' : 'flex-start'}
-            settings={settings}
-            navbarRight={navbarRight}
-            isFrontendRoute={isFrontendRoute}
-            environmentTag={environmentTag}
-            menu={menu}
-          />
-        </Col>
-      </StyledRow>
-    </StyledHeader>
+      <StyledSidebarFooter>{rightMenu}</StyledSidebarFooter>
+    </StyledSidebar>
   );
 }
 

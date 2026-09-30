@@ -35,16 +35,19 @@ export const PublishedLabel: React.FC<PublishedLabelProps> = ({
   const label = isPublished ? t('Published') : t('Draft');
   const labelType = isPublished ? 'success' : 'primary';
 
+  // Plumage status pills: Draft = primary fill, Published = success fill.
   const color = isPublished
-    ? (theme.labelPublishedColor ?? theme.colorSuccessText)
-    : (theme.labelDraftColor ?? theme.colorPrimaryText);
-  const bg = isPublished ? theme.labelPublishedBg : theme.labelDraftBg;
+    ? (theme.labelPublishedColor ?? '#ffffff')
+    : (theme.labelDraftColor ?? '#ffffff');
+  const bg = isPublished
+    ? (theme.labelPublishedBg ?? 'var(--success, #0fa05c)')
+    : (theme.labelDraftBg ?? 'var(--primary, #182316)');
   const borderColor = isPublished
-    ? theme.labelPublishedBorderColor
-    : theme.labelDraftBorderColor;
+    ? (theme.labelPublishedBorderColor ?? 'transparent')
+    : (theme.labelDraftBorderColor ?? 'transparent');
   const iconColor = isPublished
-    ? (theme.labelPublishedIconColor ?? theme.colorSuccess)
-    : (theme.labelDraftIconColor ?? theme.colorPrimary);
+    ? (theme.labelPublishedIconColor ?? '#ffffff')
+    : (theme.labelDraftIconColor ?? '#ffffff');
 
   const icon = isPublished ? (
     <Icons.CheckCircleOutlined iconSize="s" iconColor={iconColor} />
