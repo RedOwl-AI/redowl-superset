@@ -134,37 +134,23 @@ const layoutCss = css`
 const contentCss = css`
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   position: relative;
 `;
 
-// Chat panel mode locks the shell (content scrolls inside its panel); every
-// other state page-scrolls so the navbar hides on scroll.
-const lockedShellCss = css`
-  height: 100vh;
-  overflow: hidden;
-`;
-
-const pageScrollShellCss = css`
-  min-height: 100vh;
-`;
-
-const pageScrollContentCss = css`
-  display: flex;
-  flex-direction: column;
-`;
-
-/* Desktop: left Plumage sidebar + scrolling content column.
- * Narrow viewports stack the compact top bar above content. */
+/* Desktop: left Plumage sidebar fixed; only the content column scrolls.
+ * Narrow viewports stack the compact top bar above scrolling content. */
 const appShellRowCss = css`
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  min-height: 100vh;
+  flex: 1 1 auto;
   width: 100%;
-  /* Allow the sidebar collapse pill to sit on the content edge */
-  overflow: visible;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 
   @media (max-width: 767px) {
     flex-direction: column;
@@ -176,18 +162,17 @@ const appMainColumnCss = css`
   flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   /* Stay under the sidebar edge toggle */
   position: relative;
   z-index: 1;
-
-  @media (max-width: 767px) {
-    min-height: 0;
-  }
 `;
 
 // Renders the app shell and picks the scroll model: in chat panel mode <Layout>
-// sits in a Splitter beside the chat panel; otherwise the page scrolls normally.
+// sits in a Splitter beside the chat panel; otherwise content scrolls in-column
+// while the left sidebar stays fixed.
 const AppContent = ({
   layoutPortalNode,
 }: {
@@ -218,8 +203,8 @@ const AppContent = ({
   );
 
   const layoutContent = (
-    <Layout css={isPanelOpen ? layoutCss : undefined}>
-      <Layout.Content css={isPanelOpen ? contentCss : pageScrollContentCss}>
+    <Layout css={layoutCss}>
+      <Layout.Content css={contentCss}>
         <OutPortal node={layoutPortalNode} />
       </Layout.Content>
     </Layout>
@@ -276,13 +261,7 @@ const AppContent = ({
         data={bootstrapData.common.menu_data}
         isFrontendRoute={isFrontendRoute}
       />
-      <Flex
-        vertical
-        css={[
-          appMainColumnCss,
-          isPanelOpen ? lockedShellCss : pageScrollShellCss,
-        ]}
-      >
+      <Flex vertical css={appMainColumnCss}>
         <ExtensionsStartup>
           {hasChatExtension && panelOpen && (
             <InPortal node={chatPortalNode}>

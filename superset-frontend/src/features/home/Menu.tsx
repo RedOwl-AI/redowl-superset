@@ -64,9 +64,10 @@ const StyledSidebar = styled.aside<{ $collapsed?: boolean }>`
     flex-direction: column;
     width: ${$collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH};
     min-width: ${$collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH};
-    height: 100vh;
-    position: sticky;
-    top: 0;
+    height: 100%;
+    align-self: stretch;
+    position: relative;
+    flex-shrink: 0;
     /* Keep the edge toggle above the main content column */
     z-index: 100;
     background-color: var(--sidebar);

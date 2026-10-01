@@ -162,6 +162,16 @@ APP_NAME = "RedOwl"
 APP_ICON = "/static/assets/images/redowl-logo.svg"
 FAVICONS = [{"href": "/static/assets/images/favicon.png"}]
 
+# Hide the navbar/sidebar environment pill (flask-debug shifts the footer).
+ENVIRONMENT_TAG_CONFIG = {
+    "variable": "SUPERSET_ENV",
+    "values": {
+        "debug": {"color": "error", "text": ""},
+        "development": {"color": "processing", "text": ""},
+        "production": {"color": "", "text": ""},
+    },
+}
+
 # Brand app chrome + ECharts base color fallback (series still prefer color_scheme /
 # label_colors when set). Partial THEME_* is deep-merged with built-in tokens.
 # Hex values are sRGB conversions of Plumage :root / .dark semantic OKLCH tokens.

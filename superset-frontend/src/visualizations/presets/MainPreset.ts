@@ -38,6 +38,7 @@ import { CartodiagramPlugin } from '@superset-ui/plugin-chart-cartodiagram';
 import {
   BigNumberChartPlugin,
   BigNumberTotalChartPlugin,
+  KpiCardChartPlugin,
   EchartsPieChartPlugin,
   EchartsBoxPlotChartPlugin,
   EchartsCandlestickChartPlugin,
@@ -111,6 +112,7 @@ export default class MainPreset extends Preset {
         new BigNumberTotalChartPlugin().configure({
           key: VizType.BigNumberTotal,
         }),
+        new KpiCardChartPlugin().configure({ key: VizType.KpiCard }),
         new EchartsBoxPlotChartPlugin().configure({ key: VizType.BoxPlot }),
         new EchartsCandlestickChartPlugin().configure({
           key: VizType.Candlestick,

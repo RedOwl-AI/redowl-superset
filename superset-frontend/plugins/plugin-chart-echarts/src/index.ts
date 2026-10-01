@@ -42,6 +42,7 @@ export {
   BigNumberChartPlugin,
   BigNumberTotalChartPlugin,
   BigNumberPeriodOverPeriodChartPlugin,
+  KpiCardChartPlugin,
 } from './BigNumber';
 export { default as EchartsSunburstChartPlugin } from './Sunburst';
 export { default as EchartsBubbleChartPlugin } from './Bubble';

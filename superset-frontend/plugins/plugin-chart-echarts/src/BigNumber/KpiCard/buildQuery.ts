@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,8 +16,24 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+import { buildQueryContext, QueryFormData, ensureIsArray } from '@superset-ui/core';
 
-export { default as BigNumberChartPlugin } from './BigNumberWithTrendline';
-export { default as BigNumberTotalChartPlugin } from './BigNumberTotal';
-export { default as BigNumberPeriodOverPeriodChartPlugin } from './BigNumberPeriodOverPeriod';
-export { default as KpiCardChartPlugin } from './KpiCard';
+export default function buildQuery(formData: QueryFormData) {
+  return buildQueryContext(formData, baseQueryObject => {
+    const metrics = [...ensureIsArray(baseQueryObject.metrics)];
+    const secondaryMetric = formData.secondary_metric;
+    if (
+      secondaryMetric &&
+      !metrics.some(m => String(m) === String(secondaryMetric))
+    ) {
+      metrics.push(secondaryMetric);
+    }
+
+    return [
+      {
+        ...baseQueryObject,
+        metrics,
+      },
+    ];
+  });
+}
