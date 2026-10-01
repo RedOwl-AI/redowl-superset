@@ -163,6 +163,8 @@ const appShellRowCss = css`
   align-items: stretch;
   min-height: 100vh;
   width: 100%;
+  /* Allow the sidebar collapse pill to sit on the content edge */
+  overflow: visible;
 
   @media (max-width: 767px) {
     flex-direction: column;
@@ -175,6 +177,9 @@ const appMainColumnCss = css`
   flex: 1 1 auto;
   min-width: 0;
   min-height: 100vh;
+  /* Stay under the sidebar edge toggle */
+  position: relative;
+  z-index: 1;
 
   @media (max-width: 767px) {
     min-height: 0;

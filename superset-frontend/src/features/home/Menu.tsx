@@ -16,14 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { styled, css, useTheme } from '@apache-superset/core/theme';
 import { t } from '@apache-superset/core/translation';
 import { ensureStaticPrefix } from 'src/utils/assetUrl';
 import { ensureAppRoot, stripAppRoot } from 'src/utils/navigationUtils';
 import { getUrlParam, isUrlExternal } from 'src/utils/urlUtils';
 import { MainNav, MenuItem } from '@superset-ui/core/components/Menu';
-import { Tooltip, Image } from '@superset-ui/core/components';
+import { Tooltip, Image, Icons } from '@superset-ui/core/components';
 import { GenericLink } from 'src/components';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Typography } from '@superset-ui/core/components/Typography';
@@ -45,29 +45,94 @@ interface MenuProps {
 }
 
 const SIDEBAR_WIDTH = '13.75rem'; // ~220px — Plumage-style primary side menu
+const SIDEBAR_COLLAPSED_WIDTH = '4.5rem'; // 72px — room for centered icons
+const SIDEBAR_COLLAPSED_KEY = 'redowl:sidebar-collapsed';
 
-const StyledSidebar = styled.aside`
-  ${({ theme }) => css`
+const MENU_ICONS: Record<string, ReactNode> = {
+  Home: <Icons.HomeOutlined iconSize="l" />,
+  Dashboards: <Icons.DashboardOutlined iconSize="l" />,
+  Charts: <Icons.BarChartOutlined iconSize="l" />,
+  Datasets: <Icons.TableOutlined iconSize="l" />,
+  'SQL Lab': <Icons.ConsoleSqlOutlined iconSize="l" />,
+  Sources: <Icons.DatabaseOutlined iconSize="l" />,
+  Data: <Icons.DatabaseOutlined iconSize="l" />,
+};
+
+const StyledSidebar = styled.aside<{ $collapsed?: boolean }>`
+  ${({ theme, $collapsed }) => css`
     display: flex;
     flex-direction: column;
-    width: ${SIDEBAR_WIDTH};
-    min-width: ${SIDEBAR_WIDTH};
+    width: ${$collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH};
+    min-width: ${$collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH};
     height: 100vh;
     position: sticky;
     top: 0;
-    z-index: 10;
+    /* Keep the edge toggle above the main content column */
+    z-index: 100;
     background-color: var(--sidebar);
     background-image: var(--gradient-sidebar);
     border-right: 1px solid var(--sidebar-border);
     box-shadow: inset -1px 0 0 hsl(0 0% 100% / 0.04);
     color: var(--sidebar-foreground);
-    padding: ${theme.sizeUnit * 3}px ${theme.sizeUnit * 2}px;
+    padding: ${theme.sizeUnit * 3}px
+      ${$collapsed ? theme.sizeUnit * 1.5 : theme.sizeUnit * 2}px;
     box-sizing: border-box;
+    overflow: visible;
+    transition:
+      width 0.22s ease,
+      min-width 0.22s ease,
+      padding 0.22s ease;
 
     .caret {
       display: none;
     }
   `}
+`;
+
+const CollapseToggle = styled.button`
+  position: absolute;
+  top: 1.35rem;
+  right: -14px;
+  z-index: 110;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #d4d2c8;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    background: #fff;
+    color: #000;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.22);
+    transform: scale(1.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--sidebar-ring);
+    outline-offset: 2px;
+  }
+
+  /* Beat #main-menu .anticon { color: sidebar-foreground } so the chevron
+   * stays dark on the white pill. */
+  && .anticon,
+  && .anticon svg,
+  && [data-icon] {
+    color: #111 !important;
+    fill: #111 !important;
+    font-size: 14px;
+  }
 `;
 
 /** Compact top bar for narrow viewports (hamburger lives in RightMenu). */
@@ -89,14 +154,35 @@ const StyledMobileBar = styled.header`
   `}
 `;
 
-const StyledBrandBlock = styled.div`
-  ${({ theme }) => css`
+const StyledBrandBlock = styled.div<{ $collapsed?: boolean }>`
+  ${({ theme, $collapsed }) => css`
     display: flex;
     align-items: center;
+    justify-content: ${$collapsed ? 'center' : 'flex-start'};
     gap: ${theme.sizeUnit * 2}px;
-    padding: ${theme.sizeUnit * 2}px ${theme.sizeUnit * 2}px
-      ${theme.sizeUnit * 4}px;
+    padding: ${theme.sizeUnit * 2}px
+      ${$collapsed ? theme.sizeUnit : theme.sizeUnit * 2}px
+      ${theme.sizeUnit * 3}px;
     flex-shrink: 0;
+    min-height: ${theme.sizeUnit * 10}px;
+    /* Keep logo clear of the floating collapse control */
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
+
+    ${$collapsed
+      ? css`
+          .navbar-brand {
+            max-width: 2rem;
+            overflow: hidden;
+          }
+
+          img {
+            max-width: 100%;
+            height: auto !important;
+          }
+        `
+      : ''}
   `}
 `;
 
@@ -117,17 +203,21 @@ const StyledBrandText = styled.div`
   `}
 `;
 
-const StyledNavScroll = styled.div`
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  margin: 0 -${({ theme }) => theme.sizeUnit}px;
-  padding: 0 ${({ theme }) => theme.sizeUnit}px;
+const StyledNavScroll = styled.div<{ $collapsed?: boolean }>`
+  ${({ theme, $collapsed }) => css`
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 ${$collapsed ? 0 : `-${theme.sizeUnit}px`};
+    padding: 0 ${$collapsed ? 0 : `${theme.sizeUnit}px`};
+    position: relative;
+    z-index: 0;
+  `}
 `;
 
-const StyledMainNav = styled(MainNav)`
-  ${({ theme }) => css`
+const StyledMainNav = styled(MainNav)<{ $collapsed?: boolean }>`
+  ${({ theme, $collapsed }) => css`
     background: transparent !important;
     color: var(--sidebar-foreground);
     border-inline-end: none !important;
@@ -142,6 +232,12 @@ const StyledMainNav = styled(MainNav)`
       height: auto !important;
       line-height: 1.4 !important;
       padding: ${theme.sizeUnit * 2}px ${theme.sizeUnit * 3}px !important;
+    }
+
+    .ant-menu-item .ant-menu-item-icon,
+    .ant-menu-submenu-title .ant-menu-item-icon {
+      color: inherit !important;
+      font-size: 1.05rem;
     }
 
     .ant-menu-item .ant-menu-item-icon + span,
@@ -183,23 +279,97 @@ const StyledMainNav = styled(MainNav)`
     .ant-menu-submenu-arrow {
       color: var(--sidebar-muted-foreground) !important;
     }
+
+    ${$collapsed
+      ? css`
+          &.ant-menu-inline-collapsed {
+            width: 100% !important;
+          }
+
+          &.ant-menu-inline-collapsed > .ant-menu-item,
+          &.ant-menu-inline-collapsed
+            > .ant-menu-submenu
+            > .ant-menu-submenu-title {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 40px !important;
+            height: 40px !important;
+            margin: ${theme.sizeUnit}px auto !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+          }
+
+          &.ant-menu-inline-collapsed .ant-menu-item-icon,
+          &.ant-menu-inline-collapsed .ant-menu-submenu-title .ant-menu-item-icon {
+            margin: 0 !important;
+            line-height: 1 !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 1.25rem;
+            height: 1.25rem;
+          }
+
+          &.ant-menu-inline-collapsed .ant-menu-item-icon > *,
+          &.ant-menu-inline-collapsed
+            .ant-menu-submenu-title
+            .ant-menu-item-icon
+            > * {
+            margin: 0 !important;
+          }
+
+          &.ant-menu-inline-collapsed .ant-menu-title-content {
+            display: none !important;
+            width: 0 !important;
+            opacity: 0 !important;
+            overflow: hidden !important;
+          }
+
+          &.ant-menu-inline-collapsed .ant-menu-submenu-arrow {
+            display: none !important;
+          }
+        `
+      : ''}
   `}
 `;
 
-const StyledSidebarFooter = styled.div`
-  ${({ theme }) => css`
+const StyledSidebarFooter = styled.div<{ $collapsed?: boolean }>`
+  ${({ theme, $collapsed }) => css`
     flex-shrink: 0;
     border-top: 1px solid var(--sidebar-border);
     padding-top: ${theme.sizeUnit * 2}px;
     margin-top: ${theme.sizeUnit * 2}px;
+    overflow: hidden;
+    position: relative;
+    z-index: 0;
 
     /* RightMenu is horizontal; keep icons readable on the red rail */
     .ant-menu {
       background: transparent !important;
       border: none !important;
       color: var(--sidebar-foreground);
-      justify-content: flex-start;
+      justify-content: ${$collapsed ? 'center' : 'flex-start'};
+      flex-wrap: ${$collapsed ? 'wrap' : 'nowrap'};
     }
+
+    ${$collapsed
+      ? css`
+          .ant-menu-title-content {
+            display: none;
+          }
+
+          .ant-menu-item,
+          .ant-menu-submenu-title {
+            padding-inline: ${theme.sizeUnit}px !important;
+            justify-content: center;
+          }
+
+          .submenu-with-caret .ant-menu-item-icon {
+            display: none;
+          }
+        `
+      : ''}
   `}
 `;
 
@@ -268,7 +438,22 @@ export function Menu({
   const defaultTabSelection: string[] = [];
   const [activeTabs, setActiveTabs] = useState(defaultTabSelection);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch (_error) {
+      return false;
+    }
+  });
   const location = useLocation();
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch (_error) {
+      // ignore storage failures (private mode, etc.)
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     const path = location.pathname;
@@ -286,14 +471,26 @@ export function Menu({
         break;
       case path.startsWith(Paths.SqlLab) || path.startsWith(Paths.SavedQueries):
         setActiveTabs([MenuKeys.SqlLab]);
-        setOpenKeys(keys =>
-          keys.includes(MenuKeys.SqlLab) ? keys : [...keys, MenuKeys.SqlLab],
-        );
+        if (!collapsed) {
+          setOpenKeys(keys =>
+            keys.includes(MenuKeys.SqlLab) ? keys : [...keys, MenuKeys.SqlLab],
+          );
+        }
         break;
       default:
         setActiveTabs(defaultTabSelection);
     }
-  }, [location.pathname]);
+  }, [location.pathname, collapsed]);
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      if (next) {
+        setOpenKeys([]);
+      }
+      return next;
+    });
+  };
 
   const navItems = useMemo(() => {
     const buildMenuItem = ({
@@ -304,9 +501,14 @@ export function Menu({
       name,
     }: MenuObjectProps): MenuItem => {
       const key = name ?? label;
+      const icon = (name && MENU_ICONS[name]) || MENU_ICONS[label] || (
+        <Icons.AppstoreOutlined iconSize="l" />
+      );
+
       if (url && itemIsFrontendRoute) {
         return {
           key,
+          icon,
           label: (
             <NavLink to={stripAppRoot(url)} activeClassName="is-active">
               {label}
@@ -318,6 +520,7 @@ export function Menu({
       if (url) {
         return {
           key,
+          icon,
           label: <Typography.Link href={url}>{label}</Typography.Link>,
         };
       }
@@ -348,6 +551,7 @@ export function Menu({
       // Parent with children → expandable inline submenu (not a popup).
       return {
         key,
+        icon,
         label,
         children: childItems,
       };
@@ -379,6 +583,10 @@ export function Menu({
     path === RoutePaths.LOGOUT.replace(/\/$/, '') ||
     path.startsWith(RoutePaths.REGISTER.replace(/\/$/, ''));
   if (standalone || uiConfig.hideNav || isAuthPage) return <></>;
+
+  // brand.text may be empty; tooltip still needs a readable collapsed label
+  const appBrandName =
+    (theme as { brandAppName?: string }).brandAppName || brand.alt || 'RedOwl';
 
   const renderBrand = (showText = true) => {
     if (brand.hide_logo) {
@@ -435,16 +643,16 @@ export function Menu({
     }
 
     return (
-      <StyledBrandBlock>
+      <StyledBrandBlock $collapsed={collapsed && showText}>
         <Tooltip
           id="brand-tooltip"
           placement="right"
-          title={brand.tooltip}
+          title={brand.tooltip || (collapsed ? brand.text || appBrandName : '')}
           arrow={{ pointAtCenter: true }}
         >
           {link}
         </Tooltip>
-        {showText && brand.text && (
+        {showText && !collapsed && brand.text && (
           <StyledBrandText>
             <span>{brand.text}</span>
           </StyledBrandText>
@@ -482,22 +690,45 @@ export function Menu({
       className="sidebar"
       id="main-menu"
       aria-label={t('Main navigation')}
+      $collapsed={collapsed}
     >
+      <CollapseToggle
+        type="button"
+        aria-label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
+        aria-expanded={!collapsed}
+        title={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
+        onClick={toggleCollapsed}
+      >
+        {collapsed ? (
+          <Icons.RightOutlined iconSize="m" iconColor="#111111" />
+        ) : (
+          <Icons.LeftOutlined iconSize="m" iconColor="#111111" />
+        )}
+      </CollapseToggle>
+
       {!brand.hide_logo && renderBrand(true)}
 
-      <StyledNavScroll>
+      <StyledNavScroll $collapsed={collapsed}>
         <StyledMainNav
           mode="inline"
+          inlineCollapsed={collapsed}
+          $collapsed={collapsed}
           data-test="navbar-top"
           className="main-nav"
           selectedKeys={activeTabs}
-          openKeys={openKeys}
-          onOpenChange={keys => setOpenKeys(keys as string[])}
+          openKeys={collapsed ? [] : openKeys}
+          onOpenChange={keys => {
+            if (!collapsed) {
+              setOpenKeys(keys as string[]);
+            }
+          }}
           items={navItems}
         />
       </StyledNavScroll>
 
-      <StyledSidebarFooter>{rightMenu}</StyledSidebarFooter>
+      <StyledSidebarFooter $collapsed={collapsed}>
+        {rightMenu}
+      </StyledSidebarFooter>
     </StyledSidebar>
   );
 }
