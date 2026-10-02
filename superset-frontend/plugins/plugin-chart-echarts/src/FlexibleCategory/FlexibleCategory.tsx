@@ -31,11 +31,13 @@ export default function FlexibleCategory(
     width,
     height,
     data,
+    categories,
+    series,
     numberFormatter,
     defaultChartMode,
     showChartSwitcher,
     showTableToggle,
-    metricLabel,
+    metricLabels,
     groupbyLabel,
   } = props;
 
@@ -50,12 +52,15 @@ export default function FlexibleCategory(
     () =>
       buildEchartsOption(mode, data, numberFormatter, {
         labelColor: theme.colorText,
+        categories,
+        series,
       }),
-    [mode, data, numberFormatter, theme.colorText],
+    [mode, data, numberFormatter, theme.colorText, categories, series],
   );
 
   const toolbarHeight = showChartSwitcher ? theme.sizeUnit * 12 : 0;
   const chartHeight = Math.max(height - toolbarHeight, 80);
+  const multiMetric = metricLabels.length > 1;
 
   return (
     <div
@@ -112,8 +117,8 @@ export default function FlexibleCategory(
                 font-weight: ${theme.fontWeightStrong};
               }
 
-              td:last-child,
-              th:last-child {
+              td:not(:first-child),
+              th:not(:first-child) {
                 text-align: right;
               }
             `}
@@ -121,35 +126,50 @@ export default function FlexibleCategory(
             <thead>
               <tr>
                 <th>{groupbyLabel || t('Category')}</th>
-                <th>{metricLabel || t('Value')}</th>
+                {multiMetric
+                  ? metricLabels.map(label => <th key={label}>{label}</th>)
+                  : (
+                      <th>{metricLabels[0] || t('Value')}</th>
+                    )}
               </tr>
             </thead>
             <tbody>
-              {data.map(row => (
-                <tr key={row.name}>
-                  <td>
-                    <span
-                      css={css`
-                        display: inline-flex;
-                        align-items: center;
-                        gap: ${theme.sizeUnit * 2}px;
-                      `}
-                    >
-                      <span
-                        css={css`
-                          width: ${theme.sizeUnit * 2}px;
-                          height: ${theme.sizeUnit * 2}px;
-                          border-radius: 2px;
-                          background: ${row.color};
-                          flex-shrink: 0;
-                        `}
-                      />
-                      {row.name}
-                    </span>
-                  </td>
-                  <td>{numberFormatter(row.value)}</td>
-                </tr>
-              ))}
+              {multiMetric
+                ? categories.map((category, rowIndex) => (
+                    <tr key={category}>
+                      <td>{category}</td>
+                      {series.map(metricSeries => (
+                        <td key={metricSeries.name}>
+                          {numberFormatter(metricSeries.values[rowIndex])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                : data.map(row => (
+                    <tr key={row.name}>
+                      <td>
+                        <span
+                          css={css`
+                            display: inline-flex;
+                            align-items: center;
+                            gap: ${theme.sizeUnit * 2}px;
+                          `}
+                        >
+                          <span
+                            css={css`
+                              width: ${theme.sizeUnit * 2}px;
+                              height: ${theme.sizeUnit * 2}px;
+                              border-radius: 2px;
+                              background: ${row.color};
+                              flex-shrink: 0;
+                            `}
+                          />
+                          {row.name}
+                        </span>
+                      </td>
+                      <td>{numberFormatter(row.value)}</td>
+                    </tr>
+                  ))}
             </tbody>
           </table>
         </div>

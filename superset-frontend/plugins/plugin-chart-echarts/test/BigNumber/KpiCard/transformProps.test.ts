@@ -18,14 +18,14 @@
  */
 import transformProps from '../../../src/BigNumber/KpiCard/transformProps';
 
-test('renders trend pill from dragged trend metric', () => {
+test('renders trend pill from dragged trend metric without multiplying by 100', () => {
   const result = transformProps({
     width: 300,
     height: 280,
     queriesData: [
       {
         data: [
-          { sum__amount: 177199, count: 122, pct_change: 0.604 },
+          { sum__amount: 177199, count: 122, pct_change: 60.4 },
         ],
         colnames: ['sum__amount', 'count', 'pct_change'],
       },
@@ -35,7 +35,6 @@ test('renders trend pill from dragged trend metric', () => {
       secondaryMetric: 'count',
       secondaryLabel: 'leaking transactions',
       trendMetric: 'pct_change',
-      trendMetricFormat: '+,.1%',
       title: 'Total leakage',
       description: '14% of company spend is leaking.',
       showTrend: true,
@@ -62,8 +61,8 @@ test('renders trend pill from dragged trend metric', () => {
   } as any);
 
   expect(result.showTrend).toBe(true);
-  expect(result.trendValue).toBeCloseTo(0.604);
-  expect(result.trendValueFormatted).toMatch(/60\.4/);
+  expect(result.trendValue).toBeCloseTo(60.4);
+  expect(result.trendValueFormatted).toBe('+60.4%');
   expect(result.bigNumber).toContain('177');
 });
 
@@ -74,7 +73,7 @@ test('trend and secondary metrics are resolved independently', () => {
     queriesData: [
       {
         data: [
-          { sum__amount: 177199, count: 122, pct_change: 0.604 },
+          { sum__amount: 177199, count: 122, pct_change: 60.4 },
         ],
       },
     ],
@@ -83,7 +82,6 @@ test('trend and secondary metrics are resolved independently', () => {
       secondaryMetric: 'count',
       secondaryLabel: 'leaking transactions',
       trendMetric: 'pct_change',
-      trendMetricFormat: '+,.1%',
       showTrend: true,
       showTrendValue: true,
       cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
@@ -103,21 +101,45 @@ test('trend and secondary metrics are resolved independently', () => {
   expect(result.subValue).toContain('122');
   expect(result.subValue).toContain('leaking transactions');
   expect(result.showTrend).toBe(true);
-  expect(result.trendValue).toBeCloseTo(0.604);
-  expect(result.trendValueFormatted).toMatch(/60\.4/);
+  expect(result.trendValue).toBeCloseTo(60.4);
+  expect(result.trendValueFormatted).toBe('+60.4%');
+});
+
+test('ignores legacy percent d3 format so values are not multiplied by 100', () => {
+  const result = transformProps({
+    width: 300,
+    height: 280,
+    queriesData: [{ data: [{ sum__amount: 10, pct_change: 12.5 }] }],
+    formData: {
+      metric: 'sum__amount',
+      trendMetric: 'pct_change',
+      trendMetricFormat: '+,.1%',
+      showTrend: true,
+      showTrendValue: true,
+      cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
+      cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
+    },
+    datasource: {
+      metrics: [
+        { metric_name: 'sum__amount', verbose_name: 'Amount' },
+        { metric_name: 'pct_change', verbose_name: 'Pct change' },
+      ],
+      currencyFormats: {},
+      columnFormats: {},
+    },
+  } as any);
+
+  expect(result.trendValueFormatted).toBe('+12.5%');
 });
 
 test('negative trend metric is marked for red down pill', () => {
   const result = transformProps({
     width: 300,
     height: 280,
-    queriesData: [
-      { data: [{ sum__amount: 10, pct_change: -0.12 }] },
-    ],
+    queriesData: [{ data: [{ sum__amount: 10, pct_change: -12 }] }],
     formData: {
       metric: 'sum__amount',
       trendMetric: 'pct_change',
-      trendMetricFormat: '+,.1%',
       showTrend: true,
       showTrendValue: true,
       cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
@@ -140,4 +162,5 @@ test('negative trend metric is marked for red down pill', () => {
 
   expect(result.showTrend).toBe(true);
   expect(result.trendValue).toBeLessThan(0);
+  expect(result.trendValueFormatted).toBe('-12.0%');
 });

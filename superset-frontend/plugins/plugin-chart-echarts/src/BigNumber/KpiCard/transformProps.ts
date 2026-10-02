@@ -75,7 +75,7 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     description = '',
     yAxisFormat,
     currencyFormat,
-    trendMetricFormat = '+,.1%',
+    trendMetricFormat = '+,.1f',
     showTrend = true,
     showTrendValue = true,
     cardBackgroundColor = DEFAULT_BG,
@@ -126,7 +126,12 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     if (trendRaw != null) {
       trendValue = parseMetricValue(trendRaw as number | string | null);
       hasTrendValue = Number.isFinite(trendValue) && trendValue !== 0;
-      trendValueFormatted = getNumberFormatter(trendMetricFormat)(trendValue);
+      // Display the metric as received (no ×100). Always append '%'.
+      // If a saved chart still has a d3 '%' format, fall back to fixed decimals.
+      const numericFormat = trendMetricFormat?.includes('%')
+        ? '+,.1f'
+        : trendMetricFormat || '+,.1f';
+      trendValueFormatted = `${getNumberFormatter(numericFormat)(trendValue)}%`;
     }
   }
 

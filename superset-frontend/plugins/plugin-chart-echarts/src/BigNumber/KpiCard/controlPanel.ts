@@ -170,9 +170,9 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.y_axis_format,
               label: t('Trend metric format'),
-              default: '+,.1%',
+              default: '+,.1f',
               description: t(
-                'Format for the trend pill value. Use +,.1% when the metric is a ratio (0.604 → +60.4%). Use +,.1f if the metric is already in percent points (60.4).',
+                'Format for the numeric part of the trend pill. The value is shown as received (not multiplied by 100) with a % sign appended. Example: 60.4 → +60.4%.',
               ),
             },
           },

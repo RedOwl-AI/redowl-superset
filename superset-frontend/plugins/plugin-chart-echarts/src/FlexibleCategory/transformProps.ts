@@ -19,18 +19,29 @@
 import {
   CategoricalColorNamespace,
   DataRecord,
+  ensureIsArray,
   getColumnLabel,
   getMetricLabel,
+  getNumberFormatter,
+  getTimeFormatter,
   getValueFormatter,
+  QueryFormMetric,
 } from '@superset-ui/core';
-import { extractGroupbyLabel } from '../utils/series';
+import { extractGroupbyLabel, getColtypesMapping } from '../utils/series';
 import {
   CategoryDataItem,
+  CategoryMetricSeries,
   DEFAULT_FORM_DATA,
   FlexibleCategoryChartProps,
   FlexibleCategoryFormData,
   FlexibleCategoryTransformedProps,
 } from './types';
+
+function resolveMetrics(formData: FlexibleCategoryFormData): QueryFormMetric[] {
+  return ensureIsArray(
+    formData.metrics?.length ? formData.metrics : formData.metric,
+  ).filter((metric): metric is QueryFormMetric => Boolean(metric));
+}
 
 export default function transformProps(
   chartProps: FlexibleCategoryChartProps,
@@ -38,13 +49,14 @@ export default function transformProps(
   const { formData, height, queriesData, width, datasource } = chartProps;
   const data: DataRecord[] = queriesData[0]?.data || [];
   const detectedCurrency = queriesData[0]?.detected_currency;
+  const coltypeMapping = getColtypesMapping(queriesData[0] || {});
 
   const {
     colorScheme,
     groupby,
-    metric = '',
     numberFormat,
     currencyFormat,
+    dateFormat = 'smart_date',
     defaultChartMode,
     showChartSwitcher,
     showTableToggle,
@@ -60,44 +72,109 @@ export default function transformProps(
     currencyCodeColumn,
   } = datasource;
 
-  const metricLabel = getMetricLabel(metric);
-  const groupbyLabels = groupby.map(getColumnLabel);
+  const metrics = resolveMetrics(formData);
+  const metricLabels = metrics.map(getMetricLabel);
+  const groupbyLabels = ensureIsArray(groupby).map(getColumnLabel);
   const colorFn = CategoricalColorNamespace.getScale(colorScheme as string);
+  const primaryMetric = metrics[0];
+  const timeFormatter = getTimeFormatter(dateFormat);
+  const groupbyNumberFormatter = getNumberFormatter(numberFormat);
 
-  const numberFormatter = getValueFormatter(
-    metric,
-    currencyFormats,
-    columnFormats,
-    numberFormat,
-    currencyFormat,
-    undefined,
-    data,
-    currencyCodeColumn,
-    detectedCurrency,
-  );
+  const numberFormatter = primaryMetric
+    ? getValueFormatter(
+        primaryMetric,
+        currencyFormats,
+        columnFormats,
+        numberFormat,
+        currencyFormat,
+        undefined,
+        data,
+        currencyCodeColumn,
+        detectedCurrency,
+      )
+    : groupbyNumberFormatter;
 
-  const transformedData: CategoryDataItem[] = data.map(datum => {
-    const name = extractGroupbyLabel({
-      datum,
-      groupby: groupbyLabels,
-      coltypeMapping: {},
+  const hasGroupby = groupbyLabels.length > 0;
+  const categories = hasGroupby
+    ? data.map(datum =>
+        extractGroupbyLabel({
+          datum,
+          groupby: groupbyLabels,
+          coltypeMapping,
+          timeFormatter,
+          numberFormatter: groupbyNumberFormatter,
+        }),
+      )
+    : metricLabels;
+
+  const series: CategoryMetricSeries[] = hasGroupby
+    ? metricLabels.map(metricLabel => ({
+        name: metricLabel,
+        color: colorFn(metricLabel, sliceId),
+        values: data.map(datum => Number(datum[metricLabel] ?? 0)),
+      }))
+    : [
+        {
+          name: 'Value',
+          color: colorFn('Value', sliceId),
+          values: metricLabels.map(metricLabel => {
+            const datum = data[0] || {};
+            return Number(datum[metricLabel] ?? 0);
+          }),
+        },
+      ];
+
+  // Flattened items for pie / donut / treemap (and single-metric bars).
+  let flattened: CategoryDataItem[];
+  if (!hasGroupby) {
+    flattened = metricLabels.map(metricLabel => {
+      const datum = data[0] || {};
+      return {
+        name: metricLabel,
+        value: Number(datum[metricLabel] ?? 0),
+        color: colorFn(metricLabel, sliceId),
+      };
     });
-    return {
+  } else if (metricLabels.length <= 1) {
+    const metricLabel = metricLabels[0] || '';
+    flattened = categories.map((name, index) => ({
       name,
-      value: Number(datum[metricLabel] ?? 0),
+      value: Number(data[index]?.[metricLabel] ?? 0),
       color: colorFn(name, sliceId),
-    };
-  });
+    }));
+  } else {
+    // Multiple metrics × categories → "Category (Metric)" slices.
+    flattened = [];
+    categories.forEach((category, rowIndex) => {
+      metricLabels.forEach(metricLabel => {
+        flattened.push({
+          name: `${category} (${metricLabel})`,
+          value: Number(data[rowIndex]?.[metricLabel] ?? 0),
+          color: colorFn(`${category} (${metricLabel})`, sliceId),
+        });
+      });
+    });
+  }
+
+  const resolvedDefaultMode =
+    defaultChartMode &&
+    ['bar', 'column', 'pie', 'donut', 'treemap', 'table'].includes(
+      defaultChartMode,
+    )
+      ? defaultChartMode
+      : 'bar';
 
   return {
     width,
     height,
-    data: transformedData,
+    data: flattened,
+    categories,
+    series,
     numberFormatter,
-    defaultChartMode: defaultChartMode ?? 'bar',
+    defaultChartMode: resolvedDefaultMode,
     showChartSwitcher: showChartSwitcher ?? true,
     showTableToggle: showTableToggle ?? true,
-    metricLabel,
+    metricLabels,
     groupbyLabel: groupbyLabels.join(', ') || 'Category',
   };
 }

@@ -22,13 +22,20 @@ import {
   D3_FORMAT_DOCS,
   D3_FORMAT_OPTIONS,
   D3_NUMBER_FORMAT_DESCRIPTION_VALUES_TEXT,
+  D3_TIME_FORMAT_OPTIONS,
+  DEFAULT_TIME_FORMAT,
   getStandardizedControls,
   sharedControls,
 } from '@superset-ui/chart-controls';
 import { DEFAULT_FORM_DATA } from './types';
 
-const { numberFormat, defaultChartMode, showChartSwitcher, showTableToggle } =
-  DEFAULT_FORM_DATA;
+const {
+  numberFormat,
+  dateFormat,
+  defaultChartMode,
+  showChartSwitcher,
+  showTableToggle,
+} = DEFAULT_FORM_DATA;
 
 const config: ControlPanelConfig = {
   controlPanelSections: [
@@ -37,7 +44,7 @@ const config: ControlPanelConfig = {
       expanded: true,
       controlSetRows: [
         ['groupby'],
-        ['metric'],
+        ['metrics'],
         ['adhoc_filters'],
         [
           {
@@ -54,6 +61,9 @@ const config: ControlPanelConfig = {
             config: {
               ...sharedControls.sort_by_metric,
               default: true,
+              description: t(
+                'Whether to sort results by the first metric in descending order.',
+              ),
             },
           },
         ],
@@ -80,6 +90,22 @@ const config: ControlPanelConfig = {
         ],
         [
           {
+            name: 'date_format',
+            config: {
+              type: 'SelectControl',
+              freeForm: true,
+              label: t('Date format'),
+              renderTrigger: true,
+              choices: D3_TIME_FORMAT_OPTIONS,
+              default: dateFormat ?? DEFAULT_TIME_FORMAT,
+              description: t(
+                'Format temporal dimensions (e.g. year) on chart axes and labels.',
+              ),
+            },
+          },
+        ],
+        [
+          {
             name: 'default_chart_mode',
             config: {
               type: 'SelectControl',
@@ -94,7 +120,6 @@ const config: ControlPanelConfig = {
                 ['pie', t('Pie')],
                 ['donut', t('Donut')],
                 ['treemap', t('Treemap')],
-                ['funnel', t('Funnel')],
                 ['table', t('Table')],
               ],
               renderTrigger: true,
@@ -135,7 +160,7 @@ const config: ControlPanelConfig = {
   ],
   formDataOverrides: formData => ({
     ...formData,
-    metric: getStandardizedControls().shiftMetric(),
+    metrics: getStandardizedControls().popAllMetrics(),
     groupby: getStandardizedControls().popAllColumns(),
   }),
 };

@@ -16,14 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { buildQueryContext, QueryFormData } from '@superset-ui/core';
+import {
+  buildQueryContext,
+  ensureIsArray,
+  QueryFormData,
+  QueryFormMetric,
+} from '@superset-ui/core';
+
+function resolveMetrics(formData: QueryFormData): QueryFormMetric[] {
+  const metrics = ensureIsArray(
+    (formData.metrics as QueryFormMetric[] | undefined) ?? formData.metric,
+  );
+  return metrics.filter(Boolean);
+}
 
 export default function buildQuery(formData: QueryFormData) {
-  const { metric, sort_by_metric } = formData;
+  const metrics = resolveMetrics(formData);
+  const { sort_by_metric } = formData;
+  const sortMetric = metrics[0];
+
   return buildQueryContext(formData, baseQueryObject => [
     {
       ...baseQueryObject,
-      ...(sort_by_metric && { orderby: [[metric, false]] }),
+      metrics,
+      ...(sort_by_metric && sortMetric
+        ? { orderby: [[sortMetric, false]] }
+        : {}),
     },
   ]);
 }

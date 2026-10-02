@@ -16,7 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { QueryFormColumn, QueryFormData } from '@superset-ui/core';
+import {
+  QueryFormColumn,
+  QueryFormData,
+  QueryFormMetric,
+} from '@superset-ui/core';
 import { BaseChartProps } from '../types';
 
 export type ChartMode =
@@ -25,7 +29,6 @@ export type ChartMode =
   | 'pie'
   | 'donut'
   | 'treemap'
-  | 'funnel'
   | 'table';
 
 /** Modes shown inside the segmented toolbar (excludes the separate table toggle). */
@@ -37,14 +40,17 @@ export const CHART_MODES: SwitcherChartMode[] = [
   'pie',
   'donut',
   'treemap',
-  'funnel',
 ];
 
 export type FlexibleCategoryFormData = QueryFormData & {
   colorScheme?: string;
   groupby: QueryFormColumn[];
-  metric?: string;
+  /** Preferred multi-metric control. */
+  metrics?: QueryFormMetric[];
+  /** Legacy single-metric charts. */
+  metric?: QueryFormMetric;
   numberFormat: string;
+  dateFormat?: string;
   defaultChartMode: ChartMode;
   showChartSwitcher: boolean;
   showTableToggle: boolean;
@@ -56,6 +62,13 @@ export interface CategoryDataItem {
   color: string;
 }
 
+/** One metric series aligned to `categories` (used for grouped bar/column). */
+export interface CategoryMetricSeries {
+  name: string;
+  color: string;
+  values: number[];
+}
+
 export interface FlexibleCategoryChartProps
   extends BaseChartProps<FlexibleCategoryFormData> {
   formData: FlexibleCategoryFormData;
@@ -64,18 +77,25 @@ export interface FlexibleCategoryChartProps
 export interface FlexibleCategoryTransformedProps {
   width: number;
   height: number;
+  /** Flattened items for pie / donut / treemap / single-metric bars. */
   data: CategoryDataItem[];
+  /** Category axis labels (groupby values, or metric names when no groupby). */
+  categories: string[];
+  /** One series per metric for grouped bar/column charts. */
+  series: CategoryMetricSeries[];
   numberFormatter: (value: number | null | undefined) => string;
   defaultChartMode: ChartMode;
   showChartSwitcher: boolean;
   showTableToggle: boolean;
-  metricLabel: string;
+  metricLabels: string[];
   groupbyLabel: string;
 }
 
 export const DEFAULT_FORM_DATA: Partial<FlexibleCategoryFormData> = {
   groupby: [],
+  metrics: [],
   numberFormat: 'SMART_NUMBER',
+  dateFormat: 'smart_date',
   defaultChartMode: 'bar',
   showChartSwitcher: true,
   showTableToggle: true,

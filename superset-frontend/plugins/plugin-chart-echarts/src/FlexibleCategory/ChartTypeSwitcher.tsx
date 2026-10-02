@@ -33,7 +33,6 @@ const MODE_LABELS: Record<SwitcherChartMode, string> = {
   pie: t('Pie'),
   donut: t('Donut'),
   treemap: t('Treemap'),
-  funnel: t('Funnel'),
 };
 
 function DonutIcon() {
@@ -65,8 +64,6 @@ function ModeIcon({ mode }: { mode: SwitcherChartMode }) {
       return <DonutIcon />;
     case 'treemap':
       return <Icons.AppstoreOutlined iconSize="m" />;
-    case 'funnel':
-      return <Icons.StepForwardOutlined iconSize="m" />;
     default:
       return null;
   }

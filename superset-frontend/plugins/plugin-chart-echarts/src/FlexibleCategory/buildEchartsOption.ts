@@ -17,12 +17,14 @@
  * under the License.
  */
 import type { EChartsCoreOption } from 'echarts/core';
-import { CategoryDataItem, ChartMode } from './types';
+import { CategoryDataItem, CategoryMetricSeries, ChartMode } from './types';
 
 type NumberFormatter = (value: number | null | undefined) => string;
 
 type BuildOptionContext = {
   labelColor?: string;
+  categories?: string[];
+  series?: CategoryMetricSeries[];
 };
 
 function valueLabelStyle(labelColor?: string) {
@@ -40,8 +42,6 @@ function pieLikeOption(
   donut: boolean,
 ): EChartsCoreOption {
   return {
-    // Theme merges inject legend text styles; configure explicitly so the
-    // legend sits below the pie and the series leaves room for it.
     legend: {
       show: true,
       type: 'scroll',
@@ -59,7 +59,6 @@ function pieLikeOption(
     series: [
       {
         type: 'pie',
-        // Keep the pie in the upper area so it never collides with the legend.
         center: ['50%', '44%'],
         radius: donut ? ['32%', '52%'] : '52%',
         avoidLabelOverlap: true,
@@ -76,104 +75,150 @@ function pieLikeOption(
   };
 }
 
+function groupedBarOption(
+  horizontal: boolean,
+  categories: string[],
+  series: CategoryMetricSeries[],
+  numberFormatter: NumberFormatter,
+  labelColor?: string,
+): EChartsCoreOption {
+  const multiSeries = series.length > 1;
+  const categoryAxis = {
+    type: 'category' as const,
+    data: horizontal ? [...categories].reverse() : categories,
+    axisTick: { show: false },
+    axisLabel: horizontal
+      ? undefined
+      : { rotate: categories.length > 6 ? 30 : 0 },
+  };
+  const valueAxis = {
+    type: 'value' as const,
+    axisLabel: {
+      formatter: (value: number) => numberFormatter(value),
+    },
+  };
+
+  return {
+    legend: multiSeries
+      ? {
+          show: true,
+          type: 'scroll',
+          top: 0,
+          data: series.map(s => s.name),
+        }
+      : { show: false },
+    grid: {
+      containLabel: true,
+      left: horizontal ? 8 : 16,
+      right: horizontal ? 48 : 16,
+      top: multiSeries ? 36 : horizontal ? 16 : 24,
+      bottom: horizontal ? 24 : 40,
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (
+        params: { seriesName?: string; name?: string; value?: number }[],
+      ) =>
+        params
+          .map(
+            p =>
+              `${p.seriesName && multiSeries ? `${p.seriesName}: ` : ''}${p.name}: ${numberFormatter(p.value)}`,
+          )
+          .join('<br/>'),
+    },
+    xAxis: horizontal ? valueAxis : categoryAxis,
+    yAxis: horizontal ? categoryAxis : valueAxis,
+    series: series.map(s => {
+      const values = horizontal ? [...s.values].reverse() : s.values;
+      return {
+        name: s.name,
+        type: 'bar' as const,
+        data: values.map(value => ({
+          value,
+          itemStyle: {
+            color: multiSeries ? s.color : undefined,
+            borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0],
+          },
+        })),
+        // Single-metric: color each bar by category (from flattened data colors)
+        ...(multiSeries
+          ? {}
+          : {
+              // colors applied below via item override when provided
+            }),
+        label: {
+          show: !multiSeries,
+          position: horizontal ? 'right' : 'top',
+          ...valueLabelStyle(labelColor),
+          formatter: (params: { value?: number }) =>
+            numberFormatter(params.value),
+        },
+        barMaxWidth: multiSeries ? 24 : horizontal ? 28 : 40,
+      };
+    }),
+  };
+}
+
 export default function buildEchartsOption(
   mode: ChartMode,
   data: CategoryDataItem[],
   numberFormatter: NumberFormatter,
   context: BuildOptionContext = {},
 ): EChartsCoreOption {
-  const names = data.map(d => d.name);
-  const values = data.map(d => d.value);
-  const colors = data.map(d => d.color);
-  const { labelColor } = context;
+  const { labelColor, categories = [], series = [] } = context;
+  const useGroupedBars =
+    (mode === 'bar' || mode === 'column') &&
+    categories.length > 0 &&
+    series.length > 0;
 
   switch (mode) {
     case 'bar':
-      return {
-        legend: { show: false },
-        grid: { containLabel: true, left: 8, right: 48, top: 16, bottom: 24 },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: (params: { name?: string; value?: number }[]) => {
-            const p = params[0];
-            return `${p?.name}: ${numberFormatter(p?.value)}`;
-          },
-        },
-        xAxis: {
-          type: 'value',
-          axisLabel: {
-            formatter: (value: number) => numberFormatter(value),
-          },
-        },
-        yAxis: {
-          type: 'category',
-          data: [...names].reverse(),
-          axisTick: { show: false },
-        },
-        series: [
-          {
-            type: 'bar',
-            data: [...values].reverse().map((value, i) => ({
-              value,
-              itemStyle: {
-                color: [...colors].reverse()[i],
-                borderRadius: [0, 4, 4, 0],
-              },
-            })),
-            label: {
-              show: true,
-              position: 'right',
-              ...valueLabelStyle(labelColor),
-              formatter: (params: { value?: number }) =>
-                numberFormatter(params.value),
+    case 'column': {
+      if (useGroupedBars) {
+        const option = groupedBarOption(
+          mode === 'bar',
+          categories,
+          series,
+          numberFormatter,
+          labelColor,
+        );
+        // Single metric: paint bars with per-category colors from flattened data.
+        if (series.length === 1 && data.length === categories.length) {
+          const colors = data.map(d => d.color);
+          const ordered = mode === 'bar' ? [...colors].reverse() : colors;
+          const barSeries = (option.series as { data: { itemStyle?: object }[] }[])[0];
+          barSeries.data = barSeries.data.map((item, i) => ({
+            ...item,
+            itemStyle: {
+              ...item.itemStyle,
+              color: ordered[i],
             },
-            barMaxWidth: 28,
-          },
-        ],
-      };
-    case 'column':
-      return {
-        legend: { show: false },
-        grid: { containLabel: true, left: 16, right: 16, top: 24, bottom: 40 },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: (params: { name?: string; value?: number }[]) => {
-            const p = params[0];
-            return `${p?.name}: ${numberFormatter(p?.value)}`;
-          },
-        },
-        xAxis: {
-          type: 'category',
-          data: names,
-          axisTick: { show: false },
-          axisLabel: { rotate: names.length > 6 ? 30 : 0 },
-        },
-        yAxis: {
-          type: 'value',
-          axisLabel: {
-            formatter: (value: number) => numberFormatter(value),
-          },
-        },
-        series: [
-          {
-            type: 'bar',
-            data: values.map((value, i) => ({
-              value,
-              itemStyle: { color: colors[i], borderRadius: [4, 4, 0, 0] },
-            })),
-            label: {
-              show: true,
-              position: 'top',
-              ...valueLabelStyle(labelColor),
-              formatter: (params: { value?: number }) =>
-                numberFormatter(params.value),
-            },
-            barMaxWidth: 40,
-          },
-        ],
-      };
+          }));
+        }
+        return option;
+      }
+      // Fallback to flattened single-series bars.
+      const names = data.map(d => d.name);
+      const values = data.map(d => d.value);
+      const colors = data.map(d => d.color);
+      if (mode === 'bar') {
+        return groupedBarOption(
+          true,
+          names,
+          [{ name: 'Value', color: colors[0] || '#4472C4', values }],
+          numberFormatter,
+          labelColor,
+        );
+      }
+      return groupedBarOption(
+        false,
+        names,
+        [{ name: 'Value', color: colors[0] || '#4472C4', values }],
+        numberFormatter,
+        labelColor,
+      );
+    }
     case 'pie':
       return pieLikeOption(data, numberFormatter, false);
     case 'donut':
@@ -197,35 +242,6 @@ export default function buildEchartsOption(
                 `${params.name}\n${numberFormatter(params.value)}`,
             },
             itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 },
-            data: data.map(item => ({
-              name: item.name,
-              value: item.value,
-              itemStyle: { color: item.color },
-            })),
-          },
-        ],
-      };
-    case 'funnel':
-      return {
-        legend: { show: false },
-        tooltip: {
-          trigger: 'item',
-          formatter: (params: { name?: string; value?: number }) =>
-            `${params.name}: ${numberFormatter(params.value)}`,
-        },
-        series: [
-          {
-            type: 'funnel',
-            left: '10%',
-            width: '80%',
-            sort: 'descending',
-            gap: 4,
-            label: {
-              show: true,
-              position: 'inside',
-              formatter: (params: { name?: string; value?: number }) =>
-                `${params.name}: ${numberFormatter(params.value)}`,
-            },
             data: data.map(item => ({
               name: item.name,
               value: item.value,

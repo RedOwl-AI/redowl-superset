@@ -46,7 +46,7 @@ export default class EchartsFlexibleCategoryChartPlugin extends EchartsChartPlug
         category: t('CFO Dashboard charts'),
         credits: ['https://echarts.apache.org'],
         description: t(
-          'A categorical chart with an on-chart toolbar to switch between horizontal bar, vertical bar, pie, donut, treemap, funnel, and table views — without changing the query.',
+          'A categorical chart with an on-chart toolbar to switch between horizontal bar, vertical bar, pie, donut, treemap, and table views — without changing the query.',
         ),
         exampleGallery: [
           { url: exampleBar, urlDark: exampleBarDark },
