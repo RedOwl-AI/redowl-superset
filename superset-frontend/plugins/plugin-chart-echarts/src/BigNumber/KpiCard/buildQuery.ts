@@ -19,11 +19,20 @@
 import {
   buildQueryContext,
   QueryFormData,
+  QueryFormMetric,
   ensureIsArray,
+  getMetricLabel,
 } from '@superset-ui/core';
 
-function pushUniqueMetric(metrics: unknown[], metric: unknown): void {
-  if (metric && !metrics.some(m => String(m) === String(metric))) {
+function pushUniqueMetric(
+  metrics: QueryFormMetric[],
+  metric: QueryFormMetric | undefined,
+): void {
+  if (!metric) {
+    return;
+  }
+  const label = getMetricLabel(metric);
+  if (!metrics.some(existing => getMetricLabel(existing) === label)) {
     metrics.push(metric);
   }
 }
@@ -31,8 +40,18 @@ function pushUniqueMetric(metrics: unknown[], metric: unknown): void {
 export default function buildQuery(formData: QueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const metrics = [...ensureIsArray(baseQueryObject.metrics)];
-    pushUniqueMetric(metrics, formData.secondary_metric);
-    pushUniqueMetric(metrics, formData.trend_metric);
+    // Secondary and trend are independent controls — both must be queried.
+    // Compare by metric label (not String(metric)) so distinct adhoc metrics
+    // are not treated as duplicates ("[object Object]").
+    const secondaryMetric =
+      (formData.secondary_metric as QueryFormMetric | undefined) ??
+      (formData.secondaryMetric as QueryFormMetric | undefined);
+    const trendMetric =
+      (formData.trend_metric as QueryFormMetric | undefined) ??
+      (formData.trendMetric as QueryFormMetric | undefined);
+
+    pushUniqueMetric(metrics, secondaryMetric);
+    pushUniqueMetric(metrics, trendMetric);
 
     return [
       {

@@ -67,6 +67,46 @@ test('renders trend pill from dragged trend metric', () => {
   expect(result.bigNumber).toContain('177');
 });
 
+test('trend and secondary metrics are resolved independently', () => {
+  const result = transformProps({
+    width: 300,
+    height: 280,
+    queriesData: [
+      {
+        data: [
+          { sum__amount: 177199, count: 122, pct_change: 0.604 },
+        ],
+      },
+    ],
+    formData: {
+      metric: 'sum__amount',
+      secondaryMetric: 'count',
+      secondaryLabel: 'leaking transactions',
+      trendMetric: 'pct_change',
+      trendMetricFormat: '+,.1%',
+      showTrend: true,
+      showTrendValue: true,
+      cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
+      cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
+    },
+    datasource: {
+      metrics: [
+        { metric_name: 'sum__amount', verbose_name: 'Amount' },
+        { metric_name: 'count', verbose_name: 'Count' },
+        { metric_name: 'pct_change', verbose_name: 'Pct change' },
+      ],
+      currencyFormats: {},
+      columnFormats: {},
+    },
+  } as any);
+
+  expect(result.subValue).toContain('122');
+  expect(result.subValue).toContain('leaking transactions');
+  expect(result.showTrend).toBe(true);
+  expect(result.trendValue).toBeCloseTo(0.604);
+  expect(result.trendValueFormatted).toMatch(/60\.4/);
+});
+
 test('negative trend metric is marked for red down pill', () => {
   const result = transformProps({
     width: 300,
