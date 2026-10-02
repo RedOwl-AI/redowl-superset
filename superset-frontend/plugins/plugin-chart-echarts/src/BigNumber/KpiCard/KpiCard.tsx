@@ -16,12 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { css, useTheme } from '@apache-superset/core/theme';
-import { Icons } from '@superset-ui/core/components/Icons';
+import { css, isThemeDark, useTheme } from '@apache-superset/core/theme';
 import { KpiCardProps } from './types';
 
-const TREND_POSITIVE = { background: '#DCFCE7', text: '#16A34A' };
-const TREND_NEGATIVE = { background: '#FEE2E2', text: '#DC2626' };
+/** Default light-mode cream from control panel — swapped in dark mode. */
+const DEFAULT_LIGHT_BG = '#faf6e5';
+const DARK_CARD_BG = '#1a1a1a';
+const DARK_CARD_BORDER = '#c9a227';
+
+const TREND_POSITIVE_LIGHT = { background: '#DCFCE7', text: '#16A34A' };
+const TREND_NEGATIVE_LIGHT = { background: '#FEE2E2', text: '#DC2626' };
+/** Dark-mode badges match the CFO card mock (soft red / green on charcoal). */
+const TREND_POSITIVE_DARK = {
+  background: 'rgba(22, 163, 74, 0.18)',
+  text: '#4ADE80',
+};
+const TREND_NEGATIVE_DARK = {
+  background: 'rgba(220, 38, 38, 0.22)',
+  text: '#F87171',
+};
 
 function TrendingUpIcon({ color }: { color: string }) {
   return (
@@ -73,7 +86,6 @@ export default function KpiCard(props: KpiCardProps) {
     trendValueFormatted,
     showTrend,
     showTrendValue,
-    showFooterIcon,
     cardBackgroundColor,
     cardBorderColor,
     titleColor,
@@ -82,10 +94,28 @@ export default function KpiCard(props: KpiCardProps) {
   } = props;
 
   const theme = useTheme();
+  const isDark = isThemeDark(theme);
   const isPositive = trendValue > 0;
   const isNegative = trendValue < 0;
   const showTrendBadge = showTrend && (isPositive || isNegative);
-  const trendColors = isPositive ? TREND_POSITIVE : TREND_NEGATIVE;
+
+  const usingDefaultLightBg =
+    cardBackgroundColor.toLowerCase() === DEFAULT_LIGHT_BG;
+  const background = isDark && usingDefaultLightBg ? DARK_CARD_BG : cardBackgroundColor;
+  const border =
+    isDark && usingDefaultLightBg ? DARK_CARD_BORDER : cardBorderColor;
+  const resolvedTitleColor = isDark ? theme.colorTextSecondary : titleColor;
+  const resolvedValueColor = isDark ? theme.colorText : valueColor;
+  const resolvedMutedColor = isDark ? theme.colorTextSecondary : mutedTextColor;
+  const resolvedSubColor = isDark ? theme.colorText : mutedTextColor;
+
+  const trendColors = isPositive
+    ? isDark
+      ? TREND_POSITIVE_DARK
+      : TREND_POSITIVE_LIGHT
+    : isDark
+      ? TREND_NEGATIVE_DARK
+      : TREND_NEGATIVE_LIGHT;
 
   return (
     <div
@@ -103,8 +133,8 @@ export default function KpiCard(props: KpiCardProps) {
           display: flex;
           flex-direction: column;
           box-sizing: border-box;
-          background: ${cardBackgroundColor};
-          border: 1px solid ${cardBorderColor};
+          background: ${background};
+          border: ${isDark ? 1.5 : 1}px solid ${border};
           border-radius: ${theme.sizeUnit * 5}px;
           padding: ${theme.sizeUnit * 5}px;
           font-family: ${theme.fontFamily};
@@ -123,7 +153,7 @@ export default function KpiCard(props: KpiCardProps) {
           {title && (
             <div
               css={css`
-                color: ${titleColor};
+                color: ${resolvedTitleColor};
                 font-size: ${theme.fontSize}px;
                 font-weight: ${theme.fontWeightNormal};
                 line-height: 1.3;
@@ -142,7 +172,7 @@ export default function KpiCard(props: KpiCardProps) {
                 gap: ${theme.sizeUnit}px;
                 background: ${trendColors.background};
                 color: ${trendColors.text};
-                border-radius: 999px;
+                border-radius: ${theme.borderRadiusLG}px;
                 padding: ${theme.sizeUnit}px ${theme.sizeUnit * 2.5}px;
                 font-size: ${theme.fontSizeSM}px;
                 font-weight: ${theme.fontWeightStrong};
@@ -162,7 +192,7 @@ export default function KpiCard(props: KpiCardProps) {
 
           <div
             css={css`
-              color: ${valueColor};
+              color: ${resolvedValueColor};
               font-size: clamp(28px, ${Math.min(height * 0.18, 48)}px, 48px);
               font-weight: ${theme.fontWeightStrong};
               line-height: 1.1;
@@ -175,7 +205,7 @@ export default function KpiCard(props: KpiCardProps) {
           {subValue && (
             <div
               css={css`
-                color: ${mutedTextColor};
+                color: ${resolvedSubColor};
                 font-size: ${theme.fontSizeLG}px;
                 font-weight: ${theme.fontWeightNormal};
                 line-height: 1.3;
@@ -186,7 +216,7 @@ export default function KpiCard(props: KpiCardProps) {
           )}
         </div>
 
-        {(description || showFooterIcon) && (
+        {description && (
           <>
             <div
               css={css`
@@ -198,37 +228,13 @@ export default function KpiCard(props: KpiCardProps) {
             />
             <div
               css={css`
-                display: flex;
-                align-items: flex-end;
-                justify-content: space-between;
-                gap: ${theme.sizeUnit * 3}px;
+                color: ${resolvedMutedColor};
+                font-size: ${theme.fontSizeSM}px;
+                line-height: 1.45;
                 flex-shrink: 0;
               `}
             >
-              {description ? (
-                <div
-                  css={css`
-                    color: ${mutedTextColor};
-                    font-size: ${theme.fontSizeSM}px;
-                    line-height: 1.45;
-                    flex: 1 1 auto;
-                  `}
-                >
-                  {description}
-                </div>
-              ) : (
-                <div />
-              )}
-              {showFooterIcon && (
-                <Icons.FileTextOutlined
-                  iconSize="m"
-                  iconColor={theme.colorTextSecondary}
-                  css={css`
-                    flex-shrink: 0;
-                    margin-bottom: 2px;
-                  `}
-                />
-              )}
+              {description}
             </div>
           </>
         )}

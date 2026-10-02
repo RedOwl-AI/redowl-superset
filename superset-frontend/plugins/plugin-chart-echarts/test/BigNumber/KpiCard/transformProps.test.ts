@@ -40,7 +40,6 @@ test('renders trend pill from dragged trend metric', () => {
       description: '14% of company spend is leaking.',
       showTrend: true,
       showTrendValue: true,
-      showFooterIcon: true,
       yAxisFormat: '$,.0f',
       cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
       cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },

@@ -156,18 +156,6 @@ const config: ControlPanelConfig = {
             },
           },
         ],
-        [
-          {
-            name: 'show_footer_icon',
-            config: {
-              type: 'CheckboxControl',
-              label: t('Show footer icon'),
-              renderTrigger: true,
-              default: true,
-              description: t('Show the document icon in the card footer'),
-            },
-          },
-        ],
       ],
     },
     {

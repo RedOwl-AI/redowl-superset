@@ -54,6 +54,7 @@ import {
   EchartsHistogramChartPlugin,
   EchartsRadarChartPlugin,
   EchartsFunnelChartPlugin,
+  EchartsFlexibleCategoryChartPlugin,
   EchartsSankeyChartPlugin,
   EchartsTreemapChartPlugin,
   EchartsMixedTimeseriesChartPlugin,
@@ -122,6 +123,9 @@ export default class MainPreset extends Preset {
         new ChordChartPlugin().configure({ key: VizType.Chord }),
         new CountryMapChartPlugin().configure({ key: VizType.CountryMap }),
         new EchartsFunnelChartPlugin().configure({ key: VizType.Funnel }),
+        new EchartsFlexibleCategoryChartPlugin().configure({
+          key: VizType.FlexibleCategory,
+        }),
         new EchartsSankeyChartPlugin().configure({ key: VizType.Sankey }),
         new EchartsTreemapChartPlugin().configure({ key: VizType.Treemap }),
         new EchartsGanttChartPlugin().configure({ key: VizType.Gantt }),

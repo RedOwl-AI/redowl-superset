@@ -27,7 +27,7 @@ import thumbnailDark from './images/thumbnail-dark.png';
 export default class KpiCardChartPlugin extends ChartPlugin {
   constructor() {
     const metadata = new ChartMetadata({
-      category: t('KPI'),
+      category: t('CFO Dashboard charts'),
       description: t(
         'A styled KPI card showing a primary metric, optional secondary metric, trend badge, and insight description.',
       ),

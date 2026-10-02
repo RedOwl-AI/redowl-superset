@@ -23,6 +23,7 @@ import {
   EchartsTimeseriesChartPlugin,
   EchartsGraphChartPlugin,
   EchartsFunnelChartPlugin,
+  EchartsFlexibleCategoryChartPlugin,
   EchartsTreemapChartPlugin,
   EchartsAreaChartPlugin,
   EchartsTimeseriesBarChartPlugin,
@@ -47,6 +48,7 @@ test('@superset-ui/plugin-chart-echarts exists', () => {
   expect(EchartsTimeseriesChartPlugin).toBeDefined();
   expect(EchartsGraphChartPlugin).toBeDefined();
   expect(EchartsFunnelChartPlugin).toBeDefined();
+  expect(EchartsFlexibleCategoryChartPlugin).toBeDefined();
   expect(EchartsTreemapChartPlugin).toBeDefined();
   expect(EchartsAreaChartPlugin).toBeDefined();
   expect(EchartsTimeseriesBarChartPlugin).toBeDefined();
@@ -79,6 +81,9 @@ test('@superset-ui/plugin-chart-echarts-parsemethod-validation', () => {
     }),
     new EchartsFunnelChartPlugin().configure({
       key: VizType.Funnel,
+    }),
+    new EchartsFlexibleCategoryChartPlugin().configure({
+      key: VizType.FlexibleCategory,
     }),
     new EchartsTreemapChartPlugin().configure({
       key: VizType.Treemap,

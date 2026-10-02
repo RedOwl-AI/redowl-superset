@@ -16,23 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-export interface KpiCardProps {
-  height: number;
-  width: number;
-  title: string;
-  bigNumber: string;
-  subValue?: string;
-  description?: string;
-  /** Raw trend metric value — drives green/red pill and arrow direction. */
-  trendValue: number;
-  /** Formatted trend value shown in the pill (e.g. "+60.4%"). */
-  trendValueFormatted?: string;
-  showTrend: boolean;
-  /** When true, show the number next to the arrow; when false, arrow only. */
-  showTrendValue: boolean;
-  cardBackgroundColor: string;
-  cardBorderColor: string;
-  titleColor: string;
-  valueColor: string;
-  mutedTextColor: string;
+import { buildQueryContext, QueryFormData } from '@superset-ui/core';
+
+export default function buildQuery(formData: QueryFormData) {
+  const { metric, sort_by_metric } = formData;
+  return buildQueryContext(formData, baseQueryObject => [
+    {
+      ...baseQueryObject,
+      ...(sort_by_metric && { orderby: [[metric, false]] }),
+    },
+  ]);
 }

@@ -78,7 +78,6 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     trendMetricFormat = '+,.1%',
     showTrend = true,
     showTrendValue = true,
-    showFooterIcon = true,
     cardBackgroundColor = DEFAULT_BG,
     cardBorderColor = DEFAULT_BORDER,
   } = formData;
@@ -167,7 +166,6 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     trendValueFormatted,
     showTrend: Boolean(showTrend && hasTrendValue),
     showTrendValue: Boolean(showTrendValue),
-    showFooterIcon: Boolean(showFooterIcon),
     cardBackgroundColor: colorToHex(cardBackgroundColor, DEFAULT_BG),
     cardBorderColor: colorToHex(cardBorderColor, DEFAULT_BORDER),
     titleColor: '#6B7280',
