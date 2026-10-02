@@ -23,6 +23,44 @@ import { KpiCardProps } from './types';
 const TREND_POSITIVE = { background: '#DCFCE7', text: '#16A34A' };
 const TREND_NEGATIVE = { background: '#FEE2E2', text: '#DC2626' };
 
+function TrendingUpIcon({ color }: { color: string }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  );
+}
+
+function TrendingDownIcon({ color }: { color: string }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+      <polyline points="16 17 22 17 22 11" />
+    </svg>
+  );
+}
+
 export default function KpiCard(props: KpiCardProps) {
   const {
     height,
@@ -31,8 +69,10 @@ export default function KpiCard(props: KpiCardProps) {
     bigNumber,
     subValue,
     description,
-    percentDifferenceNumber,
+    trendValue,
+    trendValueFormatted,
     showTrend,
+    showTrendValue,
     showFooterIcon,
     cardBackgroundColor,
     cardBorderColor,
@@ -42,11 +82,10 @@ export default function KpiCard(props: KpiCardProps) {
   } = props;
 
   const theme = useTheme();
-  const isPositive = percentDifferenceNumber > 0;
-  const isNegative = percentDifferenceNumber < 0;
+  const isPositive = trendValue > 0;
+  const isNegative = trendValue < 0;
   const showTrendBadge = showTrend && (isPositive || isNegative);
   const trendColors = isPositive ? TREND_POSITIVE : TREND_NEGATIVE;
-  const TrendIcon = isPositive ? Icons.UpOutlined : Icons.DownOutlined;
 
   return (
     <div
@@ -99,16 +138,25 @@ export default function KpiCard(props: KpiCardProps) {
               css={css`
                 display: inline-flex;
                 align-items: center;
-                justify-content: center;
                 align-self: flex-start;
+                gap: ${theme.sizeUnit}px;
                 background: ${trendColors.background};
                 color: ${trendColors.text};
                 border-radius: 999px;
-                padding: ${theme.sizeUnit}px ${theme.sizeUnit * 2}px;
-                line-height: 1;
+                padding: ${theme.sizeUnit}px ${theme.sizeUnit * 2.5}px;
+                font-size: ${theme.fontSizeSM}px;
+                font-weight: ${theme.fontWeightStrong};
+                line-height: 1.4;
               `}
             >
-              <TrendIcon iconSize="s" iconColor={trendColors.text} />
+              {isPositive ? (
+                <TrendingUpIcon color={trendColors.text} />
+              ) : (
+                <TrendingDownIcon color={trendColors.text} />
+              )}
+              {showTrendValue && trendValueFormatted && (
+                <span>{trendValueFormatted}</span>
+              )}
             </div>
           )}
 

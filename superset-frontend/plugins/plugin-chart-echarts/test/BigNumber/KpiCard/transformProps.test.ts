@@ -18,98 +18,87 @@
  */
 import transformProps from '../../../src/BigNumber/KpiCard/transformProps';
 
-test('transforms KPI card props with metric and secondary metric', () => {
+test('renders trend pill from dragged trend metric', () => {
   const result = transformProps({
     width: 300,
     height: 280,
     queriesData: [
       {
-        data: [{ sum__amount: 176163, count: 122 }],
-        colnames: ['sum__amount', 'count'],
-        coltypes: [0, 0],
+        data: [
+          { sum__amount: 177199, count: 122, pct_change: 0.604 },
+        ],
+        colnames: ['sum__amount', 'count', 'pct_change'],
       },
     ],
     formData: {
       metric: 'sum__amount',
       secondaryMetric: 'count',
       secondaryLabel: 'leaking transactions',
+      trendMetric: 'pct_change',
+      trendMetricFormat: '+,.1%',
       title: 'Total leakage',
-      description:
-        '14% of company spend is leaking — {trend} versus the previous period.',
-      yAxisFormat: '$,.0f',
-      manualTrendPercent: '59.5',
+      description: '14% of company spend is leaking.',
       showTrend: true,
+      showTrendValue: true,
       showFooterIcon: true,
+      yAxisFormat: '$,.0f',
       cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
       cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
     },
     rawFormData: {
       viz_type: 'kpi_card',
       metric: 'sum__amount',
+      trend_metric: 'pct_change',
       secondary_metric: 'count',
     },
     datasource: {
       metrics: [
         { metric_name: 'sum__amount', verbose_name: 'Total leakage' },
         { metric_name: 'count', verbose_name: 'Count' },
+        { metric_name: 'pct_change', verbose_name: 'Pct change' },
       ],
       currencyFormats: {},
       columnFormats: {},
     },
   } as any);
 
-  expect(result.title).toBe('Total leakage');
-  expect(result.bigNumber).toContain('176');
-  expect(result.subValue).toContain('122');
   expect(result.showTrend).toBe(true);
-  expect(result.percentDifferenceNumber).toBeCloseTo(0.595);
-  expect(result.description).toMatch(/up .*59\.5/);
+  expect(result.trendValue).toBeCloseTo(0.604);
+  expect(result.trendValueFormatted).toMatch(/60\.4/);
+  expect(result.bigNumber).toContain('177');
 });
 
-test('negative manual trend drives down icon', () => {
+test('negative trend metric is marked for red down pill', () => {
   const result = transformProps({
     width: 300,
     height: 280,
-    queriesData: [{ data: [{ sum__amount: 10 }], colnames: ['sum__amount'] }],
+    queriesData: [
+      { data: [{ sum__amount: 10, pct_change: -0.12 }] },
+    ],
     formData: {
       metric: 'sum__amount',
-      manualTrendPercent: '-12.3',
+      trendMetric: 'pct_change',
+      trendMetricFormat: '+,.1%',
       showTrend: true,
+      showTrendValue: true,
       cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
       cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
     },
-    rawFormData: { viz_type: 'kpi_card', metric: 'sum__amount' },
+    rawFormData: {
+      viz_type: 'kpi_card',
+      metric: 'sum__amount',
+      trend_metric: 'pct_change',
+    },
     datasource: {
-      metrics: [{ metric_name: 'sum__amount', verbose_name: 'Amount' }],
+      metrics: [
+        { metric_name: 'sum__amount', verbose_name: 'Amount' },
+        { metric_name: 'pct_change', verbose_name: 'Pct change' },
+      ],
       currencyFormats: {},
       columnFormats: {},
     },
   } as any);
 
   expect(result.showTrend).toBe(true);
-  expect(result.percentDifferenceNumber).toBeLessThan(0);
-});
-
-test('uses free-text subheader when secondary metric is absent', () => {
-  const result = transformProps({
-    width: 300,
-    height: 280,
-    queriesData: [{ data: [{ sum__amount: 10 }], colnames: ['sum__amount'] }],
-    formData: {
-      metric: 'sum__amount',
-      subheader: '122 leaking transactions',
-      title: 'Total leakage',
-      showTrend: false,
-      cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
-      cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
-    },
-    rawFormData: { viz_type: 'kpi_card', metric: 'sum__amount' },
-    datasource: {
-      metrics: [{ metric_name: 'sum__amount', verbose_name: 'Amount' }],
-      currencyFormats: {},
-      columnFormats: {},
-    },
-  } as any);
-
-  expect(result.subValue).toBe('122 leaking transactions');
+  expect(result.trendValue).toBeLessThan(0);
 });

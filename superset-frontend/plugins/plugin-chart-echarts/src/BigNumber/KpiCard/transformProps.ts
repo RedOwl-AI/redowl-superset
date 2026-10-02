@@ -22,11 +22,12 @@ import {
   ChartProps,
   getMetricLabel,
   getValueFormatter,
+  getNumberFormatter,
   rgbToHex,
 } from '@superset-ui/core';
 import { extendedDayjs as dayjs } from '@superset-ui/core/utils/dates';
 import { getOriginalLabel } from '../utils';
-import { applyDescriptionTemplate, KpiCardProps } from './types';
+import { KpiCardProps } from './types';
 
 const DEFAULT_BG = { r: 250, g: 246, b: 229, a: 1 };
 const DEFAULT_BORDER = { r: 235, g: 203, b: 139, a: 1 };
@@ -68,24 +69,19 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     metric,
     secondaryMetric,
     secondaryLabel = '',
+    trendMetric,
     title = '',
     subheader = '',
     description = '',
     yAxisFormat,
     currencyFormat,
+    trendMetricFormat = '+,.1%',
     showTrend = true,
+    showTrendValue = true,
     showFooterIcon = true,
-    manualTrendPercent,
     cardBackgroundColor = DEFAULT_BG,
     cardBorderColor = DEFAULT_BORDER,
   } = formData;
-
-  const parsedManualTrend =
-    manualTrendPercent === undefined ||
-    manualTrendPercent === null ||
-    String(manualTrendPercent).trim() === ''
-      ? null
-      : Number(String(manualTrendPercent).replace(/%/g, '').trim());
 
   const { data: dataA = [], detected_currency: detectedCurrency } =
     queriesData[0] || {};
@@ -95,6 +91,7 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
   const secondaryMetricName = secondaryMetric
     ? getMetricLabel(secondaryMetric)
     : '';
+  const trendMetricName = trendMetric ? getMetricLabel(trendMetric) : '';
   const metrics = chartProps.datasource?.metrics || [];
   const originalLabel = getOriginalLabel(metric, metrics);
 
@@ -121,15 +118,18 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     detectedCurrency,
   );
 
-  // Manual trend percent drives the icon: >0 green↑, <0 red↓
-  const percentDifferenceNum =
-    parsedManualTrend !== null && Number.isFinite(parsedManualTrend)
-      ? parsedManualTrend / 100
-      : 0;
-  const hasTrendValue =
-    parsedManualTrend !== null &&
-    Number.isFinite(parsedManualTrend) &&
-    parsedManualTrend !== 0;
+  let trendValue = 0;
+  let trendValueFormatted: string | undefined;
+  let hasTrendValue = false;
+
+  if (trendMetricName && data.length > 0) {
+    const trendRaw = data[0][trendMetricName];
+    if (trendRaw != null) {
+      trendValue = parseMetricValue(trendRaw as number | string | null);
+      hasTrendValue = Number.isFinite(trendValue) && trendValue !== 0;
+      trendValueFormatted = getNumberFormatter(trendMetricFormat)(trendValue);
+    }
+  }
 
   let subValue: string | undefined;
   if (secondaryMetricName && data.length > 0) {
@@ -156,20 +156,17 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     subValue = subheader.trim();
   }
 
-  const rawDescription = description?.trim() || '';
-  const resolvedDescription = rawDescription
-    ? applyDescriptionTemplate(rawDescription, percentDifferenceNum)
-    : undefined;
-
   return {
     width,
     height,
     title: title?.trim() ? title : originalLabel,
     bigNumber: numberFormatter(bigNumberRaw),
     subValue,
-    description: resolvedDescription,
-    percentDifferenceNumber: percentDifferenceNum,
+    description: description?.trim() || undefined,
+    trendValue,
+    trendValueFormatted,
     showTrend: Boolean(showTrend && hasTrendValue),
+    showTrendValue: Boolean(showTrendValue),
     showFooterIcon: Boolean(showFooterIcon),
     cardBackgroundColor: colorToHex(cardBackgroundColor, DEFAULT_BG),
     cardBorderColor: colorToHex(cardBorderColor, DEFAULT_BORDER),

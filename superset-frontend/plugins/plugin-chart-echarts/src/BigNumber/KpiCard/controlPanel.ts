@@ -35,6 +35,19 @@ const config: ControlPanelConfig = {
         ['metric'],
         [
           {
+            name: 'trend_metric',
+            config: {
+              ...sharedControls.metric,
+              label: t('Trend metric'),
+              description: t(
+                'Drag a column or metric here for the trend pill. Positive → green ↑ pill with value; negative → red ↓ pill with value.',
+              ),
+              validators: [],
+            },
+          },
+        ],
+        [
+          {
             name: 'secondary_metric',
             config: {
               ...sharedControls.metric,
@@ -108,9 +121,7 @@ const config: ControlPanelConfig = {
               type: 'TextAreaControl',
               label: t('Description'),
               renderTrigger: true,
-              description: t(
-                'Footer insight below the divider. Supports placeholders: {percent}, {direction}, {trend}. Example: "14% of company spend is leaking — {trend} versus the previous period."',
-              ),
+              description: t('Footer insight text shown below the divider.'),
               default: '',
             },
           },
@@ -120,26 +131,28 @@ const config: ControlPanelConfig = {
             name: 'show_trend',
             config: {
               type: 'CheckboxControl',
-              label: t('Show trend icon'),
+              label: t('Show trend pill'),
               renderTrigger: true,
               default: true,
               description: t(
-                'Show a green up-arrow or red down-arrow pill under the title. Set Manual trend percent (positive or negative).',
+                'Show the green/red trend pill under the title when a Trend metric is set.',
               ),
             },
           },
         ],
         [
           {
-            name: 'manual_trend_percent',
+            name: 'show_trend_value',
             config: {
-              type: 'TextControl',
-              label: t('Manual trend percent'),
+              type: 'CheckboxControl',
+              label: t('Show trend value'),
               renderTrigger: true,
-              default: '',
+              default: true,
               description: t(
-                'Positive number → green ↑ pill. Negative number → red ↓ pill. Example: 59.5 or -12.3',
+                'When checked, show the trend number next to the arrow. When unchecked, show only the arrow.',
               ),
+              visibility: ({ controls }) =>
+                controls?.show_trend?.value === true,
             },
           },
         ],
@@ -163,6 +176,19 @@ const config: ControlPanelConfig = {
       controlSetRows: [
         ['y_axis_format'],
         ['currency_format'],
+        [
+          {
+            name: 'trend_metric_format',
+            config: {
+              ...sharedControls.y_axis_format,
+              label: t('Trend metric format'),
+              default: '+,.1%',
+              description: t(
+                'Format for the trend pill value. Use +,.1% when the metric is a ratio (0.604 → +60.4%). Use +,.1f if the metric is already in percent points (60.4).',
+              ),
+            },
+          },
+        ],
       ],
     },
     {

@@ -16,18 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { buildQueryContext, QueryFormData, ensureIsArray } from '@superset-ui/core';
+import {
+  buildQueryContext,
+  QueryFormData,
+  ensureIsArray,
+} from '@superset-ui/core';
+
+function pushUniqueMetric(metrics: unknown[], metric: unknown): void {
+  if (metric && !metrics.some(m => String(m) === String(metric))) {
+    metrics.push(metric);
+  }
+}
 
 export default function buildQuery(formData: QueryFormData) {
   return buildQueryContext(formData, baseQueryObject => {
     const metrics = [...ensureIsArray(baseQueryObject.metrics)];
-    const secondaryMetric = formData.secondary_metric;
-    if (
-      secondaryMetric &&
-      !metrics.some(m => String(m) === String(secondaryMetric))
-    ) {
-      metrics.push(secondaryMetric);
-    }
+    pushUniqueMetric(metrics, formData.secondary_metric);
+    pushUniqueMetric(metrics, formData.trend_metric);
 
     return [
       {

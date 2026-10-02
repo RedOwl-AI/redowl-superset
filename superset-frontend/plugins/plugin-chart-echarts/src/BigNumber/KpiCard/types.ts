@@ -23,35 +23,17 @@ export interface KpiCardProps {
   bigNumber: string;
   subValue?: string;
   description?: string;
-  percentDifferenceNumber: number;
+  /** Raw trend metric value — drives green/red pill and arrow direction. */
+  trendValue: number;
+  /** Formatted trend value shown in the pill (e.g. "+60.4%"). */
+  trendValueFormatted?: string;
   showTrend: boolean;
+  /** When true, show the number next to the arrow; when false, arrow only. */
+  showTrendValue: boolean;
   showFooterIcon: boolean;
   cardBackgroundColor: string;
   cardBorderColor: string;
   titleColor: string;
   valueColor: string;
   mutedTextColor: string;
-}
-
-/** Apply description placeholders using computed trend values. */
-export function applyDescriptionTemplate(
-  template: string,
-  percentDifferenceNumber: number,
-): string {
-  const absPercent = `${Math.abs(percentDifferenceNumber * 100).toFixed(1)}%`;
-  const direction =
-    percentDifferenceNumber > 0
-      ? 'up'
-      : percentDifferenceNumber < 0
-        ? 'down'
-        : 'unchanged';
-  const trend =
-    percentDifferenceNumber === 0
-      ? 'unchanged'
-      : `${direction} ${absPercent}`;
-
-  return template
-    .replaceAll('{percent}', absPercent)
-    .replaceAll('{direction}', direction)
-    .replaceAll('{trend}', trend);
 }
