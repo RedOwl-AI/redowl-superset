@@ -16,13 +16,52 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { css, useTheme } from '@apache-superset/core/theme';
 import { t } from '@apache-superset/core/translation';
 import Echart from '../components/Echart';
 import buildEchartsOption from './buildEchartsOption';
 import ChartTypeSwitcher from './ChartTypeSwitcher';
-import { ChartMode, FlexibleCategoryTransformedProps } from './types';
+import {
+  CHART_MODES,
+  ChartMode,
+  FlexibleCategoryTransformedProps,
+} from './types';
+
+const MODE_STORAGE_PREFIX = 'superset:flexible_category_mode:';
+const modeMemoryCache = new Map<string, ChartMode>();
+
+const VALID_MODES = new Set<ChartMode>([...CHART_MODES, 'table']);
+
+function isChartMode(value: string | null | undefined): value is ChartMode {
+  return Boolean(value && VALID_MODES.has(value as ChartMode));
+}
+
+function readPersistedMode(chartKey: string): ChartMode | undefined {
+  const cached = modeMemoryCache.get(chartKey);
+  if (cached) {
+    return cached;
+  }
+  try {
+    const stored = sessionStorage.getItem(`${MODE_STORAGE_PREFIX}${chartKey}`);
+    if (isChartMode(stored)) {
+      modeMemoryCache.set(chartKey, stored);
+      return stored;
+    }
+  } catch {
+    // sessionStorage may be unavailable (private mode / SSR)
+  }
+  return undefined;
+}
+
+function writePersistedMode(chartKey: string, mode: ChartMode): void {
+  modeMemoryCache.set(chartKey, mode);
+  try {
+    sessionStorage.setItem(`${MODE_STORAGE_PREFIX}${chartKey}`, mode);
+  } catch {
+    // ignore quota / access errors
+  }
+}
 
 export default function FlexibleCategory(
   props: FlexibleCategoryTransformedProps,
@@ -39,14 +78,29 @@ export default function FlexibleCategory(
     showTableToggle,
     metricLabels,
     groupbyLabel,
+    chartKey,
+    setControlValue,
   } = props;
 
   const theme = useTheme();
-  const [mode, setMode] = useState<ChartMode>(defaultChartMode);
+  const [mode, setMode] = useState<ChartMode>(
+    () => readPersistedMode(chartKey) ?? defaultChartMode,
+  );
 
+  // Only re-hydrate when the chart identity changes — never on data refresh.
   useEffect(() => {
-    setMode(defaultChartMode);
-  }, [defaultChartMode]);
+    setMode(readPersistedMode(chartKey) ?? defaultChartMode);
+  }, [chartKey]); // eslint-disable-line react-hooks/exhaustive-deps -- defaultChartMode is fallback only
+
+  const handleModeChange = useCallback(
+    (nextMode: ChartMode) => {
+      setMode(nextMode);
+      writePersistedMode(chartKey, nextMode);
+      // Keep Explore form_data in sync when available (dashboard may no-op).
+      setControlValue?.('default_chart_mode', nextMode);
+    },
+    [chartKey, setControlValue],
+  );
 
   const echartOptions = useMemo(
     () =>
@@ -84,7 +138,7 @@ export default function FlexibleCategory(
         >
           <ChartTypeSwitcher
             mode={mode}
-            onChange={setMode}
+            onChange={handleModeChange}
             showTableToggle={showTableToggle}
           />
         </div>

@@ -89,6 +89,9 @@ export interface FlexibleCategoryTransformedProps {
   showTableToggle: boolean;
   metricLabels: string[];
   groupbyLabel: string;
+  /** Stable id so the selected chart mode survives data reloads / remounts. */
+  chartKey: string;
+  setControlValue?: (name: string, value: unknown) => void;
 }
 
 export const DEFAULT_FORM_DATA: Partial<FlexibleCategoryFormData> = {

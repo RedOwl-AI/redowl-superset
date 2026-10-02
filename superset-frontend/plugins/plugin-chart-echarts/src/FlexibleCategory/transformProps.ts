@@ -176,5 +176,7 @@ export default function transformProps(
     showTableToggle: showTableToggle ?? true,
     metricLabels,
     groupbyLabel: groupbyLabels.join(', ') || 'Category',
+    chartKey: String(sliceId ?? formData.sliceId ?? 'flexible-category-explore'),
+    setControlValue: chartProps.hooks?.setControlValue,
   };
 }
