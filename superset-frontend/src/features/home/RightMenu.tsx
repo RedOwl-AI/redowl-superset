@@ -133,6 +133,7 @@ const RightMenu = ({
   isFrontendRoute,
   environmentTag,
   menu,
+  collapsed = false,
   setQuery,
 }: RightMenuProps & {
   setQuery: ({
@@ -618,9 +619,19 @@ const RightMenu = ({
     if (!navbarRight.user_is_anonymous && showActionDropdown) {
       items.push({
         key: 'new-dropdown',
-        label: <Icons.PlusOutlined data-test="new-dropdown-icon" />,
-        className: 'submenu-with-caret',
-        icon: <Icons.DownOutlined iconSize="xs" />,
+        label: collapsed ? (
+          ''
+        ) : (
+          <Icons.PlusOutlined data-test="new-dropdown-icon" />
+        ),
+        className: collapsed
+          ? 'submenu-with-caret ant-menu-submenu-collapsed-icon'
+          : 'submenu-with-caret',
+        icon: collapsed ? (
+          <Icons.PlusOutlined data-test="new-dropdown-icon" />
+        ) : (
+          <Icons.DownOutlined iconSize="xs" />
+        ),
         children: buildNewDropdownItems(),
         popupOffset: NAVBAR_MENU_POPUP_OFFSET,
       });
@@ -636,10 +647,16 @@ const RightMenu = ({
 
     items.push({
       key: 'settings',
-      label: t('Settings'),
-      icon: <Icons.DownOutlined iconSize="xs" />,
+      label: collapsed ? '' : t('Settings'),
+      icon: collapsed ? (
+        <Icons.SettingOutlined aria-label={t('Settings')} />
+      ) : (
+        <Icons.DownOutlined iconSize="xs" />
+      ),
       children: buildSettingsMenuItems(),
-      className: 'submenu-with-caret',
+      className: collapsed
+        ? 'submenu-with-caret ant-menu-submenu-collapsed-icon'
+        : 'submenu-with-caret',
       popupOffset: NAVBAR_MENU_POPUP_OFFSET,
     });
 
@@ -658,6 +675,7 @@ const RightMenu = ({
     RightMenuItemIconExtension,
     buildMenuItem,
     handleLogout,
+    collapsed,
   ]);
 
   // Build mobile menu items - consumption only (no create/admin actions)

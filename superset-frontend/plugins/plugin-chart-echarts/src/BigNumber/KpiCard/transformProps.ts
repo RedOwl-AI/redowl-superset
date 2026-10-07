@@ -26,7 +26,6 @@ import {
   rgbToHex,
 } from '@superset-ui/core';
 import { extendedDayjs as dayjs } from '@superset-ui/core/utils/dates';
-import { getOriginalLabel } from '../utils';
 import { KpiCardProps } from './types';
 
 const DEFAULT_BG = { r: 250, g: 246, b: 229, a: 1 };
@@ -91,9 +90,6 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
     ? getMetricLabel(secondaryMetric)
     : '';
   const trendMetricName = trendMetric ? getMetricLabel(trendMetric) : '';
-  const metrics = chartProps.datasource?.metrics || [];
-  const originalLabel = getOriginalLabel(metric, metrics);
-
   let metricEntry: Metric | undefined;
   if (chartProps.datasource?.metrics) {
     metricEntry = chartProps.datasource.metrics.find(
@@ -163,7 +159,7 @@ export default function transformProps(chartProps: ChartProps): KpiCardProps {
   return {
     width,
     height,
-    title: title?.trim() ? title : originalLabel,
+    title: title?.trim() || '',
     bigNumber: numberFormatter(bigNumberRaw),
     subValue,
     description: description?.trim() || undefined,

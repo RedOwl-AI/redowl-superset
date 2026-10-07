@@ -165,9 +165,10 @@ const appMainColumnCss = css`
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  /* Stay under the sidebar edge toggle */
+  /* Stay under the sidebar (and its edge toggle) so collapsed-rail
+   * icons remain clickable when layouts paint overlapping hit areas. */
   position: relative;
-  z-index: 1;
+  z-index: 0;
 `;
 
 // Renders the app shell and picks the scroll model: in chat panel mode <Layout>

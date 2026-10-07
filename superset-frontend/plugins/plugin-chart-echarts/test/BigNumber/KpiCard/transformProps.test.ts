@@ -164,3 +164,30 @@ test('negative trend metric is marked for red down pill', () => {
   expect(result.trendValue).toBeLessThan(0);
   expect(result.trendValueFormatted).toBe('-12.0%');
 });
+
+test('empty title does not fall back to metric label', () => {
+  const result = transformProps({
+    width: 300,
+    height: 280,
+    queriesData: [{ data: [{ sum__amount: 100 }] }],
+    formData: {
+      metric: 'sum__amount',
+      title: '',
+      cardBackgroundColor: { r: 250, g: 246, b: 229, a: 1 },
+      cardBorderColor: { r: 235, g: 203, b: 139, a: 1 },
+    },
+    rawFormData: {
+      viz_type: 'kpi_card',
+      metric: 'sum__amount',
+    },
+    datasource: {
+      metrics: [
+        { metric_name: 'sum__amount', verbose_name: 'Total leakage' },
+      ],
+      currencyFormats: {},
+      columnFormats: {},
+    },
+  } as any);
+
+  expect(result.title).toBe('');
+});

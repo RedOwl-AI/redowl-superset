@@ -25,7 +25,7 @@ import { getUrlParam, isUrlExternal } from 'src/utils/urlUtils';
 import { MainNav, MenuItem } from '@superset-ui/core/components/Menu';
 import { Tooltip, Image, Icons } from '@superset-ui/core/components';
 import { GenericLink } from 'src/components';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useHistory, useLocation } from 'react-router-dom';
 import { Typography } from '@superset-ui/core/components/Typography';
 import { useUiConfig } from 'src/components/UiConfigContext';
 import { useIsMobile } from 'src/hooks/useIsMobile';
@@ -37,6 +37,7 @@ import {
   MenuData,
 } from 'src/types/bootstrapTypes';
 import { datasetsLabel } from 'src/features/semanticLayers/label';
+import { navigateTo } from 'src/utils/navigationUtils';
 import RightMenu from './RightMenu';
 
 interface MenuProps {
@@ -47,6 +48,7 @@ interface MenuProps {
 const SIDEBAR_WIDTH = '13.75rem'; // ~220px — Plumage-style primary side menu
 const SIDEBAR_COLLAPSED_WIDTH = '4.5rem'; // 72px — room for centered icons
 const SIDEBAR_COLLAPSED_KEY = 'redowl:sidebar-collapsed';
+const COLLAPSED_BRAND_LOGO = '/static/assets/images/redowl-logo.svg';
 
 const MENU_ICONS: Record<string, ReactNode> = {
   Home: <Icons.HomeOutlined iconSize="l" />,
@@ -68,8 +70,10 @@ const StyledSidebar = styled.aside<{ $collapsed?: boolean }>`
     align-self: stretch;
     position: relative;
     flex-shrink: 0;
-    /* Keep the edge toggle above the main content column */
+    /* Keep the rail (and edge toggle) above the main content column */
     z-index: 100;
+    isolation: isolate;
+    pointer-events: auto;
     background-color: var(--sidebar);
     background-image: var(--gradient-sidebar);
     border-right: 1px solid var(--sidebar-border);
@@ -175,12 +179,15 @@ const StyledBrandBlock = styled.div<{ $collapsed?: boolean }>`
       ? css`
           .navbar-brand {
             max-width: 2rem;
-            overflow: hidden;
+            overflow: visible;
           }
 
           img {
-            max-width: 100%;
-            height: auto !important;
+            max-width: 2rem;
+            max-height: 2rem;
+            width: 2rem;
+            height: 2rem !important;
+            object-fit: contain;
           }
         `
       : ''}
@@ -299,6 +306,8 @@ const StyledMainNav = styled(MainNav)<{ $collapsed?: boolean }>`
             margin: ${theme.sizeUnit}px auto !important;
             padding: 0 !important;
             line-height: 1 !important;
+            pointer-events: auto !important;
+            cursor: pointer;
           }
 
           &.ant-menu-inline-collapsed .ant-menu-item-icon,
@@ -310,6 +319,7 @@ const StyledMainNav = styled(MainNav)<{ $collapsed?: boolean }>`
             justify-content: center;
             width: 1.25rem;
             height: 1.25rem;
+            pointer-events: none;
           }
 
           &.ant-menu-inline-collapsed .ant-menu-item-icon > *,
@@ -320,11 +330,21 @@ const StyledMainNav = styled(MainNav)<{ $collapsed?: boolean }>`
             margin: 0 !important;
           }
 
+          /* Keep labels out of the icon rail, but do not remove them from the
+           * accessibility tree in a way that blocks item-level navigation.
+           * Clicks hit the menu item; onClick handlers perform navigation. */
           &.ant-menu-inline-collapsed .ant-menu-title-content {
-            display: none !important;
-            width: 0 !important;
-            opacity: 0 !important;
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
             overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
           }
 
           &.ant-menu-inline-collapsed .ant-menu-submenu-arrow {
@@ -356,17 +376,33 @@ const StyledSidebarFooter = styled.div<{ $collapsed?: boolean }>`
 
     ${$collapsed
       ? css`
-          .ant-menu-title-content {
-            display: none;
-          }
-
           .ant-menu-item,
           .ant-menu-submenu-title {
             padding-inline: ${theme.sizeUnit}px !important;
             justify-content: center;
+            pointer-events: auto !important;
+            cursor: pointer;
           }
 
-          .submenu-with-caret .ant-menu-item-icon {
+          /* Compact triggers: show the action icon, hide empty/text labels */
+          .submenu-with-caret.ant-menu-submenu-collapsed-icon
+            .ant-menu-title-content {
+            display: none;
+          }
+
+          .submenu-with-caret.ant-menu-submenu-collapsed-icon
+            .ant-menu-item-icon {
+            display: inline-flex !important;
+          }
+
+          /* Non-compact caret menus: keep prior icon-rail behavior */
+          .submenu-with-caret:not(.ant-menu-submenu-collapsed-icon)
+            .ant-menu-title-content:not(:has(.anticon)) {
+            display: none;
+          }
+
+          .submenu-with-caret:not(.ant-menu-submenu-collapsed-icon)
+            .ant-menu-item-icon {
             display: none;
           }
         `
@@ -418,6 +454,7 @@ export function Menu({
   const isMobile = useIsMobile();
   const uiConfig = useUiConfig();
   const theme = useTheme();
+  const history = useHistory();
 
   enum Paths {
     Explore = '/explore',
@@ -494,6 +531,14 @@ export function Menu({
   };
 
   const navItems = useMemo(() => {
+    const goTo = (url: string, frontend: boolean) => {
+      if (frontend) {
+        history.push(stripAppRoot(url));
+      } else {
+        navigateTo(url, { assign: true });
+      }
+    };
+
     const buildMenuItem = ({
       label,
       childs,
@@ -515,6 +560,8 @@ export function Menu({
               {label}
             </NavLink>
           ),
+          // Collapsed rail hides the NavLink visually; item click still navigates.
+          onClick: () => goTo(url, true),
         };
       }
 
@@ -523,6 +570,7 @@ export function Menu({
           key,
           icon,
           label: <Typography.Link href={url}>{label}</Typography.Link>,
+          onClick: () => goTo(url, false),
         };
       }
 
@@ -532,11 +580,12 @@ export function Menu({
           childItems.push({ type: 'divider', key: `divider-${index1}` });
         } else if (typeof child !== 'string') {
           Object.assign(child, { label: t(child.label) });
+          const childUrl = child.url || '';
           childItems.push({
             key: child.name ?? `${child.label}`,
             label: child.isFrontendRoute ? (
               <NavLink
-                to={stripAppRoot(child.url || '')}
+                to={stripAppRoot(childUrl)}
                 exact
                 activeClassName="is-active"
               >
@@ -545,11 +594,14 @@ export function Menu({
             ) : (
               <Typography.Link href={child.url}>{child.label}</Typography.Link>
             ),
+            onClick: childUrl
+              ? () => goTo(childUrl, !!child.isFrontendRoute)
+              : undefined,
           });
         }
       });
 
-      // Parent with children → expandable inline submenu (not a popup).
+      // Parent with children → expandable inline submenu (popup when collapsed).
       return {
         key,
         icon,
@@ -575,7 +627,7 @@ export function Menu({
       };
       return buildMenuItem(props);
     });
-  }, [menu, isFrontendRoute]);
+  }, [menu, isFrontendRoute, history]);
 
   const standalone = getUrlParam(URL_PARAMS.standalone);
   const path = location.pathname.replace(/\/$/, '') || '/';
@@ -593,15 +645,25 @@ export function Menu({
     if (brand.hide_logo) {
       return null;
     }
+    const useCollapsedIcon = Boolean(collapsed && showText);
+    const brandLogoSrc = ensureStaticPrefix(
+      useCollapsedIcon
+        ? COLLAPSED_BRAND_LOGO
+        : theme.brandLogoUrl || brand.icon,
+    );
+    const brandLogoHeight = useCollapsedIcon
+      ? '32px'
+      : theme.brandLogoHeight;
+
     let link;
-    if (theme.brandLogoUrl) {
-      const brandHref = ensureAppRoot(theme.brandLogoHref);
+    if (theme.brandLogoUrl || useCollapsedIcon) {
+      const brandHref = ensureAppRoot(theme.brandLogoHref || brand.path);
       const brandImage = (
         <StyledImage
           preview={false}
-          src={ensureStaticPrefix(theme.brandLogoUrl)}
-          alt={theme.brandLogoAlt || 'Apache Superset'}
-          height={theme.brandLogoHeight}
+          src={brandLogoSrc}
+          alt={theme.brandLogoAlt || brand.alt || appBrandName}
+          height={brandLogoHeight}
         />
       );
       link = (
@@ -622,7 +684,7 @@ export function Menu({
         <GenericLink className="navbar-brand" to={stripAppRoot(brand.path)}>
           <StyledImage
             preview={false}
-            src={ensureStaticPrefix(brand.icon)}
+            src={brandLogoSrc}
             alt={brand.alt}
           />
         </GenericLink>
@@ -636,7 +698,7 @@ export function Menu({
         >
           <StyledImage
             preview={false}
-            src={ensureStaticPrefix(brand.icon)}
+            src={brandLogoSrc}
             alt={brand.alt}
           />
         </Typography.Link>
@@ -644,7 +706,7 @@ export function Menu({
     }
 
     return (
-      <StyledBrandBlock $collapsed={collapsed && showText}>
+      <StyledBrandBlock $collapsed={useCollapsedIcon}>
         <Tooltip
           id="brand-tooltip"
           placement="right"
@@ -670,6 +732,7 @@ export function Menu({
       isFrontendRoute={isFrontendRoute}
       environmentTag={environmentTag}
       menu={menu}
+      collapsed={!isMobile && collapsed}
     />
   );
 
@@ -717,12 +780,14 @@ export function Menu({
           data-test="navbar-top"
           className="main-nav"
           selectedKeys={activeTabs}
-          openKeys={collapsed ? [] : openKeys}
-          onOpenChange={keys => {
-            if (!collapsed) {
-              setOpenKeys(keys as string[]);
-            }
-          }}
+          // When collapsed, leave openKeys uncontrolled so Ant Design can
+          // show popup submenus on icon click.
+          {...(collapsed
+            ? {}
+            : {
+                openKeys,
+                onOpenChange: (keys: string[]) => setOpenKeys(keys),
+              })}
           items={navItems}
         />
       </StyledNavScroll>

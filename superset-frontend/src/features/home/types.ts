@@ -49,6 +49,8 @@ export interface RightMenuProps {
   };
   children?: ReactNode;
   menu?: MenuObjectProps[];
+  /** When the parent sidebar is icon-only, use compact icon triggers. */
+  collapsed?: boolean;
 }
 
 export enum GlobalMenuDataOptions {
