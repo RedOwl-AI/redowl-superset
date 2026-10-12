@@ -90,8 +90,8 @@ const mockedProps = {
     menu: [],
     brand: {
       path: '/superset/welcome/',
-      icon: '/static/assets/images/superset-logo-horiz.png',
-      alt: 'Apache Superset',
+      icon: '/static/assets/images/redowl-logo-white.svg',
+      alt: 'RedOwl',
       width: '126',
       tooltip: '',
       text: '',
