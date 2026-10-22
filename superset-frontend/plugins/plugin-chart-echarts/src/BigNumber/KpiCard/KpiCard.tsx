@@ -24,6 +24,9 @@ const DEFAULT_LIGHT_BG = '#faf6e5';
 const DARK_CARD_BG = '#1a1a1a';
 const DARK_CARD_BORDER = '#c9a227';
 
+/** Comfortable reference height for full-size typography. */
+const REF_HEIGHT = 280;
+
 const TREND_POSITIVE_LIGHT = { background: '#DCFCE7', text: '#16A34A' };
 const TREND_NEGATIVE_LIGHT = { background: '#FEE2E2', text: '#DC2626' };
 /** Dark-mode badges match the CFO card mock (soft red / green on charcoal). */
@@ -36,11 +39,15 @@ const TREND_NEGATIVE_DARK = {
   text: '#F87171',
 };
 
-function TrendingUpIcon({ color }: { color: string }) {
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function TrendingUpIcon({ color, size }: { color: string; size: number }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
@@ -55,11 +62,11 @@ function TrendingUpIcon({ color }: { color: string }) {
   );
 }
 
-function TrendingDownIcon({ color }: { color: string }) {
+function TrendingDownIcon({ color, size }: { color: string; size: number }) {
   return (
     <svg
-      width="14"
-      height="14"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
@@ -117,12 +124,39 @@ export default function KpiCard(props: KpiCardProps) {
       ? TREND_NEGATIVE_DARK
       : TREND_NEGATIVE_LIGHT;
 
+  // Scale typography / spacing with tile height so footer text stays visible.
+  const scale = clamp(height / REF_HEIGHT, 0.5, 1);
+  const outerPad = Math.round(theme.sizeUnit * scale);
+  const cardPad = Math.round(theme.sizeUnit * 5 * scale);
+  const stackGap = Math.round(theme.sizeUnit * 2 * scale);
+  const footerGap = Math.round(theme.sizeUnit * 2.5 * scale);
+
+  const titleFont = Math.round(clamp(theme.fontSize * scale, 11, theme.fontSize));
+  const badgeFont = Math.round(clamp(theme.fontSizeSM * scale, 10, theme.fontSizeSM));
+  const iconSize = Math.round(clamp(14 * scale, 10, 14));
+  const badgePadY = Math.round(theme.sizeUnit * scale);
+  const badgePadX = Math.round(theme.sizeUnit * 2.5 * scale);
+
+  // Primary value: shrink faster when a description also needs room.
+  const valueRatio = description ? 0.13 : 0.16;
+  const valueFont = Math.round(
+    clamp(height * valueRatio, 18, Math.min(48, width * 0.14)),
+  );
+  const subFont = Math.round(
+    clamp(theme.fontSizeLG * scale, 11, theme.fontSizeLG),
+  );
+  const descFont = Math.round(
+    clamp(theme.fontSizeSM * scale, 10, theme.fontSizeSM),
+  );
+  // Cap description lines so a long blurb never pushes itself out of view.
+  const descMaxLines = height < 200 ? 2 : height < 260 ? 3 : 4;
+
   return (
     <div
       css={css`
         height: ${height}px;
         width: ${width}px;
-        padding: ${theme.sizeUnit}px;
+        padding: ${outerPad}px;
         box-sizing: border-box;
       `}
     >
@@ -135,108 +169,118 @@ export default function KpiCard(props: KpiCardProps) {
           box-sizing: border-box;
           background: ${background};
           border: ${isDark ? 1.5 : 1}px solid ${border};
-          border-radius: ${theme.sizeUnit * 5}px;
-          padding: ${theme.sizeUnit * 5}px;
+          border-radius: ${Math.round(theme.sizeUnit * 5 * scale)}px;
+          padding: ${cardPad}px;
           font-family: ${theme.fontFamily};
           overflow: hidden;
+          gap: ${stackGap}px;
         `}
       >
-        <div
-          css={css`
-            flex: 1 1 auto;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            gap: ${theme.sizeUnit * 2}px;
-          `}
-        >
-          {title && (
-            <div
-              css={css`
-                color: ${resolvedTitleColor};
-                font-size: ${theme.fontSize}px;
-                font-weight: ${theme.fontWeightNormal};
-                line-height: 1.3;
-              `}
-            >
-              {title}
-            </div>
-          )}
-
-          {showTrendBadge && (
-            <div
-              css={css`
-                display: inline-flex;
-                align-items: center;
-                align-self: flex-start;
-                gap: ${theme.sizeUnit}px;
-                background: ${trendColors.background};
-                color: ${trendColors.text};
-                border-radius: ${theme.borderRadiusLG}px;
-                padding: ${theme.sizeUnit}px ${theme.sizeUnit * 2.5}px;
-                font-size: ${theme.fontSizeSM}px;
-                font-weight: ${theme.fontWeightStrong};
-                line-height: 1.4;
-              `}
-            >
-              {isPositive ? (
-                <TrendingUpIcon color={trendColors.text} />
-              ) : (
-                <TrendingDownIcon color={trendColors.text} />
-              )}
-              {showTrendValue && trendValueFormatted && (
-                <span>{trendValueFormatted}</span>
-              )}
-            </div>
-          )}
-
+        {title && (
           <div
             css={css`
-              color: ${resolvedValueColor};
-              font-size: clamp(28px, ${Math.min(height * 0.18, 48)}px, 48px);
-              font-weight: ${theme.fontWeightStrong};
-              line-height: 1.1;
-              letter-spacing: -0.02em;
+              color: ${resolvedTitleColor};
+              font-size: ${titleFont}px;
+              font-weight: ${theme.fontWeightNormal};
+              line-height: 1.3;
+              flex-shrink: 0;
             `}
           >
-            {bigNumber}
+            {title}
           </div>
+        )}
 
-          {subValue && (
-            <div
-              css={css`
-                color: ${resolvedSubColor};
-                font-size: ${theme.fontSizeLG}px;
-                font-weight: ${theme.fontWeightNormal};
-                line-height: 1.3;
-              `}
-            >
-              {subValue}
-            </div>
-          )}
+        {showTrendBadge && (
+          <div
+            css={css`
+              display: inline-flex;
+              align-items: center;
+              align-self: flex-start;
+              gap: ${Math.round(theme.sizeUnit * scale)}px;
+              background: ${trendColors.background};
+              color: ${trendColors.text};
+              border-radius: ${theme.borderRadiusLG}px;
+              padding: ${badgePadY}px ${badgePadX}px;
+              font-size: ${badgeFont}px;
+              font-weight: ${theme.fontWeightStrong};
+              line-height: 1.3;
+              flex-shrink: 0;
+            `}
+          >
+            {isPositive ? (
+              <TrendingUpIcon color={trendColors.text} size={iconSize} />
+            ) : (
+              <TrendingDownIcon color={trendColors.text} size={iconSize} />
+            )}
+            {showTrendValue && trendValueFormatted && (
+              <span>{trendValueFormatted}</span>
+            )}
+          </div>
+        )}
+
+        <div
+          css={css`
+            color: ${resolvedValueColor};
+            font-size: ${valueFont}px;
+            font-weight: ${theme.fontWeightStrong};
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            flex-shrink: 0;
+          `}
+        >
+          {bigNumber}
         </div>
 
+        {subValue && (
+          <div
+            css={css`
+              color: ${resolvedSubColor};
+              font-size: ${subFont}px;
+              font-weight: ${theme.fontWeightNormal};
+              line-height: 1.35;
+              flex-shrink: 0;
+            `}
+          >
+            {subValue}
+          </div>
+        )}
+
         {description && (
-          <>
+          <div
+            css={css`
+              margin-top: auto;
+              flex: 1 1 auto;
+              min-height: 0;
+              display: flex;
+              flex-direction: column;
+              gap: ${footerGap}px;
+              min-width: 0;
+              padding-top: ${stackGap}px;
+            `}
+          >
             <div
               css={css`
                 height: 1px;
                 background: ${theme.colorSplit};
-                margin: ${theme.sizeUnit * 4}px 0 ${theme.sizeUnit * 3}px;
                 flex-shrink: 0;
               `}
             />
             <div
               css={css`
                 color: ${resolvedMutedColor};
-                font-size: ${theme.fontSizeSM}px;
+                font-size: ${descFont}px;
+                font-weight: ${theme.fontWeightNormal};
                 line-height: 1.45;
-                flex-shrink: 0;
+                word-break: break-word;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: ${descMaxLines};
               `}
             >
               {description}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
